@@ -1,1 +1,1 @@
-# iga-app
+# icyareta-ai
