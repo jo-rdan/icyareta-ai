@@ -1,7 +1,30 @@
 version: "3.8"
+
 services:
+  # --- Application Container ---
   app:
-    build: .
+    build: . # Tells Docker to use the Dockerfile in the current directory
     ports:
-      - "3000:3000"
+      - "3000:3000" # Maps port 3000 on your machine to port 3000 in container
+    environment:
+      - DATABASE_URL=postgres://${DB_DOCKER_USER}:${DB_DOCKER_PASS}@db:5432/${DB_DOCKER_NAME}
+      - PORT=3000
+    depends_on:
+      - db # Ensures the DB starts before the app
+
+  # --- PostgreSQL Database ---
+  db:
+    image: postgres:15-alpine
+    container_name: icyareta_db
     restart: always
+    environment:
+      POSTGRES_USER: ${DB_DOCKER_USER}
+      POSTGRES_PASSWORD: ${DB_DOCKER_PASS}
+      POSTGRES_DB: ${DB_DOCKER_NAME}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
