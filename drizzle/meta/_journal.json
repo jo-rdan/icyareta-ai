@@ -8,6 +8,20 @@
       "when": 1772391154513,
       "tag": "0000_wandering_tomorrow_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772419667932,
+      "tag": "0001_true_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772483225996,
+      "tag": "0002_tan_the_order",
+      "breakpoints": true
     }
   ]
 }

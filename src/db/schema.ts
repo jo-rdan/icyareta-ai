@@ -6,6 +6,7 @@ import {
   boolean,
   timestamp,
   pgEnum,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -63,11 +64,13 @@ export const questions = pgTable("questions", {
     .references(() => examPacks.id)
     .notNull(),
   questionText: text().notNull(),
-  optionA: text().notNull(),
-  optionB: text().notNull(),
-  optionC: text().notNull(),
-  correctOption: text().notNull(),
+
+  // 🔥 CHANGE THIS: Store options as a JSON object (e.g., {"A": "...", "B": "..."})
+  options: jsonb().notNull(),
+
+  correctOption: text().notNull(), // Stores the key (e.g., "A")
   explanation: text(),
+  year: integer().notNull(),
 });
 
 // --- Stores detailed session history ---
