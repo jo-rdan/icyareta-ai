@@ -1,15 +1,29 @@
 import express, { Request, Response } from "express";
+import ussdRoutes from "./routes/ussd.routes";
+import * as dotenv from "dotenv";
 
-const app = express();
+dotenv.config();
+
+const server = express();
 const PORT = process.env.PORT || 3000;
 
-app.get("/", (req: Request, res: Response) => {
+// ─── Middleware ───────────────────────────────────────────────────────────────
+server.use(express.urlencoded({ extended: false }));
+server.use(express.json());
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+server.use("/api", ussdRoutes);
+
+// ─── Health Check ─────────────────────────────────────────────────────────────
+server.get("/health", (_req: Request, res: Response) => {
   res.json({
-    message: "Icyareta Backend Active",
-    status: "Ready for NESA Simulations",
+    status: "ok",
+    service: "Icyareta Backend",
+    timestamp: new Date().toISOString(),
   });
 });
 
-app.listen(PORT, () => {
+// ─── Start ────────────────────────────────────────────────────────────────────
+server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
