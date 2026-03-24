@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1772391154513,
+      "tag": "0000_wandering_tomorrow_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772419667932,
+      "tag": "0001_true_proteus",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772483225996,
+      "tag": "0002_tan_the_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1773312933247,
+      "tag": "0003_thankful_shriek",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773476659131,
+      "tag": "0004_wonderful_vance_astro",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773477519903,
+      "tag": "0005_vengeful_rockslide",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774120209818,
+      "tag": "0006_noisy_silk_fever",
+      "breakpoints": true
+    }
+  ]
+}
