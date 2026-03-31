@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/useAuth";
 import {
   Box,
   Button,
@@ -8,12 +9,10 @@ import {
   VStack,
   SimpleGrid,
   Badge,
-  Image,
+  Center,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/useAuth";
-import heroIllustration from "@/assets/Illustration.svg";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(24px); }
@@ -24,14 +23,14 @@ const SUBJECTS = [
   { icon: "🔢", name: "Mathematics" },
   { icon: "📖", name: "English Language" },
   { icon: "🔬", name: "Science & Technology" },
-  { icon: "🌍", name: "Social Studies & Religious Studies" },
+  { icon: "🌍", name: "Social Studies" },
 ];
 
 const HOW = [
   {
     step: "01",
     title: "Try for free",
-    desc: "Answer 5 real P6 questions on any subject. No payment needed.",
+    desc: "Answer 3 real P6 questions on any subject. No payment needed.",
   },
   {
     step: "02",
@@ -41,7 +40,7 @@ const HOW = [
   {
     step: "03",
     title: "Subscribe & practice",
-    desc: "Unlock all subjects with our Day Pass at RF 800",
+    desc: "Unlock all subjects and difficulty levels for a full day access at 800 RWF.",
   },
 ];
 
@@ -100,130 +99,123 @@ export default function Landing() {
                 color="white"
                 letterSpacing="-0.5px"
               >
-                Icyareta
+                Xeta
               </Text>
             </Box>
           </Flex>
 
-          <Flex
-            direction={"row"}
-            justifyContent={"space-around"}
-            wrap={"wrap-reverse"}
+          <VStack
+            align="flex-start"
+            gap="5"
+            style={{ animation: `${fadeUp} 0.6s ease forwards` }}
           >
-            <VStack
-              align="flex-start"
-              gap="5"
-              style={{ animation: `${fadeUp} 0.6s ease forwards` }}
+            <Badge
+              bg="rgba(126,232,162,0.2)"
+              color="#7ee8a2"
+              outline="1px solid rgba(126,232,162,0.3)"
+              px="3"
+              py="1"
+              borderRadius="full"
+              fontSize="11px"
+              fontWeight="600"
+              letterSpacing="0.8px"
             >
-              <Badge
-                bg="rgba(126,232,162,0.2)"
-                color="#7ee8a2"
-                outline="1px solid rgba(126,232,162,0.3)"
-                px="3"
-                py="1"
-                borderRadius="full"
-                fontSize="11px"
-                fontWeight="600"
-                letterSpacing="0.8px"
-              >
-                P6 EXAM PREP • RWANDA 2026
-              </Badge>
+              P6 EXAM PREP • RWANDA 2026
+            </Badge>
 
-              <Heading
-                fontFamily="heading"
-                fontSize={{ base: "42px", md: "58px" }}
-                fontWeight="800"
-                color="white"
-                lineHeight="1.05"
-                letterSpacing="-2px"
-              >
-                Prep smarter.
-                <br />
-                <Box as="span" color="#7ee8a2">
-                  Score higher.
-                </Box>
-              </Heading>
+            <Heading
+              fontFamily="heading"
+              fontSize={{ base: "42px", md: "58px" }}
+              fontWeight="800"
+              color="white"
+              lineHeight="1.05"
+              letterSpacing="-2px"
+            >
+              Prep smarter.
+              <br />
+              <Box as="span" color="#7ee8a2">
+                Score higher.
+              </Box>
+            </Heading>
 
-              <Text
-                color="rgba(255,255,255,0.75)"
-                fontSize={{ base: "15px", md: "17px" }}
-                lineHeight="1.7"
-                maxW="480px"
-              >
-                Rwanda's first mobile exam prep platform. Real P6 curriculum
-                questions. Instant results. Works offline.
-              </Text>
+            <Text
+              color="rgba(255,255,255,0.75)"
+              fontSize={{ base: "15px", md: "17px" }}
+              lineHeight="1.7"
+              maxW="480px"
+            >
+              Rwanda's first mobile exam prep platform. Real P6 curriculum
+              questions. Instant results. Works offline.
+            </Text>
 
-              <SimpleGrid columns={3} gap="3" w="full" maxW="400px" pt="2">
-                {[
-                  { num: "480+", label: "Questions" },
-                  { num: "4", label: "Subjects" },
-                  { num: "P6", label: "Aligned" },
-                ].map((s) => (
-                  <Box
-                    key={s.label}
-                    bg="rgba(255,255,255,0.1)"
-                    outline="1px solid rgba(255,255,255,0.15)"
-                    borderRadius="14px"
-                    p="3"
-                    textAlign="center"
-                  >
-                    <Text
-                      fontFamily="heading"
-                      fontWeight="800"
-                      fontSize="22px"
-                      color="white"
-                    >
-                      {s.num}
-                    </Text>
-                    <Text
-                      fontSize="10px"
-                      color="rgba(255,255,255,0.6)"
-                      mt="2px"
-                      fontWeight="500"
-                    >
-                      {s.label}
-                    </Text>
-                  </Box>
-                ))}
-              </SimpleGrid>
-
-              <VStack gap="3" w="full" maxW="400px" pt="2">
-                <Button
-                  w="full"
-                  size="lg"
-                  py="7"
-                  fontSize="16px"
-                  bg="white"
-                  color="brand.600"
-                  _hover={{
-                    bg: "brand.50",
-                    transform: "translateY(-2px)",
-                    boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
-                  }}
-                  transition="all 0.2s"
-                  onClick={handleTrial}
-                >
-                  Try Free — 5 Questions
-                </Button>
-                <Button
-                  w="full"
-                  size="lg"
-                  py="7"
-                  fontSize="15px"
-                  fontWeight="600"
+            <SimpleGrid columns={3} gap="3" w="full" maxW="400px" pt="2">
+              {[
+                { num: "480+", label: "Questions" },
+                { num: "4", label: "Subjects" },
+                { num: "P6", label: "Aligned" },
+              ].map((s) => (
+                <Box
+                  key={s.label}
                   bg="rgba(255,255,255,0.1)"
-                  color="white"
-                  outline="1px solid rgba(255,255,255,0.25)"
-                  _hover={{ bg: "rgba(255,255,255,0.18)" }}
-                  onClick={() => navigate("/pricing")}
+                  outline="1px solid rgba(255,255,255,0.15)"
+                  borderRadius="14px"
+                  p="3"
+                  textAlign="center"
                 >
-                  Day Pass — 800 RWF
-                </Button>
-              </VStack>
+                  <Text
+                    fontFamily="heading"
+                    fontWeight="800"
+                    fontSize="22px"
+                    color="white"
+                  >
+                    {s.num}
+                  </Text>
+                  <Text
+                    fontSize="10px"
+                    color="rgba(255,255,255,0.6)"
+                    mt="2px"
+                    fontWeight="500"
+                  >
+                    {s.label}
+                  </Text>
+                </Box>
+              ))}
+            </SimpleGrid>
+
+            <VStack gap="3" w="full" maxW="360px" pt="2">
+              <Button
+                w="full"
+                size="lg"
+                py="7"
+                fontSize="16px"
+                bg="white"
+                color="brand.600"
+                _hover={{
+                  bg: "brand.50",
+                  transform: "translateY(-2px)",
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
+                }}
+                transition="all 0.2s"
+                onClick={handleTrial}
+              >
+                Try Free — 5 Questions
+              </Button>
+              <Button
+                w="full"
+                size="lg"
+                py="7"
+                fontSize="15px"
+                fontWeight="600"
+                bg="rgba(255,255,255,0.1)"
+                color="white"
+                outline="1px solid rgba(255,255,255,0.25)"
+                _hover={{ bg: "rgba(255,255,255,0.18)" }}
+                onClick={() => navigate("/pricing")}
+              >
+                Full Day Access — 800 RWF
+              </Button>
             </VStack>
-            <Image src={heroIllustration} maxWidth={500} />
-          </Flex>
+          </VStack>
         </Container>
       </Box>
 
@@ -269,7 +261,8 @@ export default function Landing() {
 
       {/* ── How it works ── */}
       <Box bg="white" py="12">
-        <Container maxW="container.md" px="6">
+        {/* <Container maxW="container.md" px="6"> */}
+        <Flex justifyContent={"center"}>
           <Text
             fontFamily="heading"
             fontWeight="700"
@@ -281,51 +274,43 @@ export default function Landing() {
           >
             How it works
           </Text>
-          <VStack gap="4" align="stretch">
-            {HOW.map((item) => (
-              <Flex
-                key={item.step}
-                bg="paper"
-                borderRadius="16px"
-                p="5"
-                gap="4"
-                align="center"
-              >
-                <Box
-                  minW="48px"
-                  h="48px"
-                  bg="brand.600"
-                  borderRadius="14px"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
+        </Flex>
+        <VStack gap="4" align="stretch">
+          {HOW.map((item) => (
+            <Center
+              key={item.step}
+              bg="paper"
+              borderRadius="16px"
+              p="5"
+              gap="4"
+            >
+              <Box h="48px" bg="brand.600" borderRadius="14px">
+                <Text
+                  fontFamily="heading"
+                  fontWeight="800"
+                  fontSize="16px"
+                  color="white"
                 >
-                  <Text
-                    fontFamily="heading"
-                    fontWeight="800"
-                    fontSize="16px"
-                    color="white"
-                  >
-                    {item.step}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text
-                    fontFamily="heading"
-                    fontWeight="700"
-                    fontSize="15px"
-                    mb="1"
-                  >
-                    {item.title}
-                  </Text>
-                  <Text fontSize="13px" color="gray.500" lineHeight="1.5">
-                    {item.desc}
-                  </Text>
-                </Box>
-              </Flex>
-            ))}
-          </VStack>
-        </Container>
+                  {item.step}
+                </Text>
+              </Box>
+              <Box>
+                <Text
+                  fontFamily="heading"
+                  fontWeight="700"
+                  fontSize="15px"
+                  mb="1"
+                >
+                  {item.title}
+                </Text>
+                <Text fontSize="13px" color="gray.500" lineHeight="1.5">
+                  {item.desc}
+                </Text>
+              </Box>
+            </Center>
+          ))}
+        </VStack>
+        {/* </Container> */}
       </Box>
 
       {/* ── Bottom CTA ── */}

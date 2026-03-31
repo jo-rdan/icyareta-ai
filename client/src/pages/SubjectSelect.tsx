@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -8,40 +9,104 @@ import {
   VStack,
   Badge,
   IconButton,
+  Spinner,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
-import { useQuiz } from "../context/useQuiz";
-import { SUBJECTS, MOCK_RESULTS } from "../data/mock";
 import { ArrowLeft } from "lucide-react";
+import api from "../lib/axios";
+import { useQuiz } from "@/context/useQuiz";
+
+interface Subject {
+  id: string;
+  name: string;
+}
+interface Result {
+  subjectName: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+}
 
 const SUBJECT_COLORS: Record<string, string> = {
-  "1": "#1a3f6b",
-  "2": "#6b3a1a",
-  "3": "#1a6b3c",
-  "4": "#6b1a4a",
+  Mathematics: "#1a3f6b",
+  "English Language": "#6b3a1a",
+  "Science & Elementary Technology": "#1a6b3c",
+  "Social & Religious Studies": "#6b1a4a",
+};
+
+const SUBJECT_ICONS: Record<string, string> = {
+  Mathematics: "🔢",
+  "English Language": "📖",
+  "Science & Elementary Technology": "🔬",
+  "Social & Religious Studies": "🌍",
 };
 
 export default function SubjectSelect() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { startQuiz } = useQuiz();
+  const { startQuiz, error: quizError } = useQuiz();
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [starting, setStarting] = useState<string | null>(null);
 
   const hasPaid = user?.accessStatus === "active";
   const trialUsed = user?.hasUsedFreeTrial;
   const isLocked = !hasPaid && !!trialUsed;
 
-  const lastResult = (subjectName: string) =>
-    MOCK_RESULTS.find((r) => r.subjectName === subjectName);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [subRes, resRes] = await Promise.all([
+          api.get("/subjects"),
+          hasPaid ? api.get("/user/results") : Promise.resolve({ data: [] }),
+        ]);
+        setSubjects(subRes.data);
+        setResults(resRes.data);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [hasPaid]);
 
-  const handleSelect = (subjectId: string, subjectName: string) => {
+  const handleSelect = async (subjectId: string, subjectName: string) => {
     if (isLocked) {
       navigate("/pricing");
       return;
     }
-    startQuiz(subjectId, subjectName, "diagnostic", !hasPaid);
-    navigate("/quiz");
+    setStarting(subjectId);
+    try {
+      await startQuiz(subjectId, subjectName, "diagnostic", !hasPaid);
+      navigate("/quiz");
+    } finally {
+      setStarting(null);
+    }
   };
+
+  const lastResult = (name: string) =>
+    results.find((r) => r.subjectName === name);
+
+  if (isLoading) {
+    return (
+      <Box
+        minH="100vh"
+        bg="paper"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Spinner
+          color="brand.600"
+          borderWidth="3px"
+          width="40px"
+          height="40px"
+        />
+      </Box>
+    );
+  }
 
   return (
     <Box minH="100vh" bg="paper">
@@ -68,12 +133,7 @@ export default function SubjectSelect() {
               >
                 <ArrowLeft size={16} />
               </IconButton>
-              <Text
-                fontFamily="heading"
-                fontWeight="800"
-                fontSize="16px"
-                letterSpacing="-0.3px"
-              >
+              <Text fontFamily="heading" fontWeight="800" fontSize="16px">
                 Icyareta
               </Text>
             </Flex>
@@ -89,7 +149,7 @@ export default function SubjectSelect() {
                 cursor="pointer"
                 onClick={() => navigate("/pricing")}
               >
-                {trialUsed ? "Subscribe" : "Free Trial"}
+                {trialUsed ? "Get Day Pass" : "Free Trial"}
               </Badge>
             )}
           </Flex>
@@ -106,7 +166,7 @@ export default function SubjectSelect() {
             textTransform="uppercase"
             color="gray.400"
           >
-            {hasPaid ? "Your subjects" : "Choose a subject to try"}
+            {hasPaid ? "Your subjects" : "Choose a subject"}
           </Text>
           <Heading
             fontFamily="heading"
@@ -120,15 +180,33 @@ export default function SubjectSelect() {
             {hasPaid
               ? "Which subject will you practice today?"
               : isLocked
-                ? "Subscribe to keep practicing all subjects."
+                ? "Get a Day Pass to keep practicing all subjects."
                 : "Pick any subject — 5 questions, no payment needed."}
           </Text>
         </VStack>
 
+        {quizError && (
+          <Box
+            bg="red.50"
+            border="1px solid"
+            borderColor="red.200"
+            borderRadius="12px"
+            px="4"
+            py="3"
+            mb="4"
+          >
+            <Text fontSize="13px" color="red.600">
+              {quizError}
+            </Text>
+          </Box>
+        )}
+
         <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
-          {SUBJECTS.map((subject) => {
+          {subjects.map((subject) => {
             const result = lastResult(subject.name);
-            const color = SUBJECT_COLORS[subject.id];
+            const color = SUBJECT_COLORS[subject.name] ?? "#1a6b3c";
+            const icon = SUBJECT_ICONS[subject.name] ?? "📚";
+            const isStarting = starting === subject.id;
 
             return (
               <Box
@@ -138,9 +216,11 @@ export default function SubjectSelect() {
                 borderColor="gray.100"
                 borderRadius="20px"
                 p="5"
-                cursor={isLocked ? "default" : "pointer"}
+                cursor={isLocked || isStarting ? "default" : "pointer"}
                 opacity={isLocked ? 0.6 : 1}
-                onClick={() => handleSelect(subject.id, subject.name)}
+                onClick={() =>
+                  !isStarting && handleSelect(subject.id, subject.name)
+                }
                 _hover={
                   !isLocked
                     ? {
@@ -166,7 +246,16 @@ export default function SubjectSelect() {
 
                 <Flex pl="3" justify="space-between" align="flex-start">
                   <VStack align="flex-start" gap="2" flex={1}>
-                    <Text fontSize="28px">{subject.icon}</Text>
+                    {isStarting ? (
+                      <Spinner
+                        color="brand.600"
+                        borderWidth="2px"
+                        width="28px"
+                        height="28px"
+                      />
+                    ) : (
+                      <Text fontSize="28px">{icon}</Text>
+                    )}
                     <Text
                       fontFamily="heading"
                       fontWeight="700"
@@ -174,9 +263,6 @@ export default function SubjectSelect() {
                       letterSpacing="-0.3px"
                     >
                       {subject.name}
-                    </Text>
-                    <Text fontSize="12px" color="gray.400" fontWeight="500">
-                      {subject.questionCount} questions
                     </Text>
 
                     {result && hasPaid && (
@@ -189,30 +275,23 @@ export default function SubjectSelect() {
                             fontSize="11px"
                             fontWeight="600"
                             color={
-                              result.score / result.total >= 0.6
-                                ? "brand.600"
-                                : "red.400"
+                              result.percentage >= 60 ? "brand.600" : "red.400"
                             }
                           >
-                            {result.score}/{result.total}
+                            {result.score}/{result.totalQuestions}
                           </Text>
                         </Flex>
                         <Box w="full" h="4px" bg="gray.100" borderRadius="full">
                           <Box
                             h="full"
-                            w={`${(result.score / result.total) * 100}%`}
-                            bg={
-                              result.score / result.total >= 0.6
-                                ? "brand.500"
-                                : "red.400"
-                            }
+                            w={`${result.percentage}%`}
+                            bg={result.percentage >= 60 ? "#1a6b3c" : "#f87171"}
                             borderRadius="full"
                           />
                         </Box>
                       </VStack>
                     )}
                   </VStack>
-
                   {isLocked && (
                     <Box bg="gray.100" p="2" borderRadius="10px">
                       <Text fontSize="16px">🔒</Text>
@@ -235,10 +314,11 @@ export default function SubjectSelect() {
             textAlign="center"
           >
             <Text fontSize="13px" color="brand.700" fontWeight="500">
-              After your free trial, subscribe for full access —{" "}
+              After your free trial, get a{" "}
               <Box as="span" fontWeight="700">
-                5,000 RWF/month
-              </Box>
+                Day Pass for 800 RWF
+              </Box>{" "}
+              to practice all subjects.
             </Text>
           </Box>
         )}

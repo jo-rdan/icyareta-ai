@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -6,11 +6,12 @@ import {
   Text,
   VStack,
   IconButton,
+  Spinner,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { useNavigate } from "react-router-dom";
-import { useQuiz } from "../context/useQuiz";
 import { X } from "lucide-react";
+import { useQuiz } from "@/context/useQuiz";
 
 const popIn = keyframes`
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -21,16 +22,13 @@ const OPTIONS = ["A", "B", "C", "D"] as const;
 
 export default function Quiz() {
   const navigate = useNavigate();
-  const { session, currentQuestion, submitAnswer } = useQuiz();
+  const { session, isLoading, submitAnswer } = useQuiz();
   const [selected, setSelected] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const [prevIndex, setPrevIndex] = useState(session?.currentIndex);
-
-  if (session?.currentIndex !== prevIndex) {
-    setPrevIndex(session?.currentIndex);
-    setSelected(null);
-    setRevealed(false);
-  }
+  const [lastAnswer, setLastAnswer] = useState<{
+    correctOption: string;
+    explanation: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -42,45 +40,99 @@ export default function Quiz() {
     }
   }, [session, navigate]);
 
-  if (!session || !currentQuestion) return null;
+  // Reset selection state when question changes
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelected(null);
+    setRevealed(false);
+    setLastAnswer(null);
+  }, [session?.currentQuestion?.id]);
 
-  const total = session.questions.length;
-  const current = session.currentIndex + 1;
-  const progress = ((current - 1) / total) * 100;
+  if (!session || !session.currentQuestion) {
+    return (
+      <Box
+        minH="100vh"
+        bg="paper"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Spinner
+          color="brand.600"
+          borderWidth="3px"
+          width="40px"
+          height="40px"
+        />
+      </Box>
+    );
+  }
 
-  const pick = (opt: (typeof OPTIONS)[number]) => {
-    if (revealed) return;
+  const { currentQuestion, isTrial } = session;
+  const { index, total } = currentQuestion;
+  const progress = (index / total) * 100;
+
+  const pick = async (opt: (typeof OPTIONS)[number]) => {
+    if (revealed || isLoading) return;
     setSelected(opt);
     setRevealed(true);
-    setTimeout(() => submitAnswer(opt), 850);
+
+    // Get the answer details before submitting moves to next question
+    await new Promise((r) => setTimeout(r, 900));
+    await submitAnswer(opt);
   };
 
-  const getOptionBg = (letter: string) => {
+  const getBg = (letter: string) => {
     if (!revealed) return selected === letter ? "#e8f5ee" : "white";
-    if (letter === currentQuestion.correctOption) return "#e8f5ee";
+    if (
+      letter === lastAnswer?.correctOption ||
+      (!lastAnswer && letter === selected)
+    )
+      return "#e8f5ee";
     if (letter === selected) return "#fdeaea";
     return "white";
   };
 
-  const getOptionBorder = (letter: string) => {
+  const getBorder = (letter: string) => {
     if (!revealed) return selected === letter ? "#1a6b3c" : "#e4e4e7";
-    if (letter === currentQuestion.correctOption) return "#1a6b3c";
+    if (
+      letter === lastAnswer?.correctOption ||
+      (!lastAnswer && letter === selected)
+    )
+      return "#1a6b3c";
     if (letter === selected) return "#b83030";
     return "#e4e4e7";
   };
 
   const getLetterBg = (letter: string) => {
     if (!revealed) return selected === letter ? "#1a6b3c" : "#f4f4f5";
-    if (letter === currentQuestion.correctOption) return "#1a6b3c";
+    if (
+      letter === lastAnswer?.correctOption ||
+      (!lastAnswer && letter === selected)
+    )
+      return "#1a6b3c";
     if (letter === selected) return "#b83030";
     return "#f4f4f5";
   };
 
   const getLetterColor = (letter: string) => {
     if (!revealed) return selected === letter ? "white" : "#71717a";
-    if (letter === currentQuestion.correctOption) return "white";
+    const correct = lastAnswer?.correctOption ?? selected;
+    if (letter === correct) return "white";
     if (letter === selected) return "white";
     return "#d4d4d8";
+  };
+
+  // Track the last answer for showing correct option
+  const handleAnswer = async (opt: (typeof OPTIONS)[number]) => {
+    if (revealed || isLoading) return;
+    setSelected(opt);
+    setRevealed(true);
+
+    // Store which answer we submitted before submitAnswer clears the question
+    const answerRecord = session.answers[session.answers.length]; // will be added
+    await new Promise((r) => setTimeout(r, 850));
+
+    await submitAnswer(opt);
   };
 
   return (
@@ -115,16 +167,15 @@ export default function Quiz() {
             </Text>
             <Box bg="brand.50" px="3" py="1" borderRadius="full">
               <Text fontSize="12px" fontWeight="600" color="brand.600">
-                {current} / {total}
+                {index + 1} / {total}
               </Text>
             </Box>
           </Flex>
-          {/* Progress bar */}
           <Box w="full" h="6px" bg="gray.100" borderRadius="full">
             <Box
               h="full"
               w={`${progress}%`}
-              bg="brand.500"
+              bg="green.500"
               borderRadius="full"
               transition="width 0.3s"
             />
@@ -135,7 +186,7 @@ export default function Quiz() {
       {/* Body */}
       <Container maxW="container.sm" px="6" py="8">
         <VStack gap="6" align="stretch">
-          {session.isTrial && (
+          {isTrial && (
             <Box
               bg="orange.50"
               border="1px solid"
@@ -150,8 +201,8 @@ export default function Quiz() {
                 fontWeight="500"
                 textAlign="center"
               >
-                🎯 Free trial — {total - current + 1} question
-                {total - current + 1 !== 1 ? "s" : ""} remaining
+                🎯 Free trial — {total - index - 1} question
+                {total - index - 1 !== 1 ? "s" : ""} remaining after this
               </Text>
             </Box>
           )}
@@ -166,7 +217,7 @@ export default function Quiz() {
               color="gray.400"
               mb="3"
             >
-              Question {current} of {total}
+              Question {index + 1} of {total}
             </Text>
             <Text
               fontFamily="heading"
@@ -174,36 +225,35 @@ export default function Quiz() {
               fontSize={{ base: "20px", md: "24px" }}
               lineHeight="1.4"
               letterSpacing="-0.5px"
-              color="gray.900"
             >
-              {currentQuestion.questionText}
+              {currentQuestion.text}
             </Text>
           </Box>
 
           {/* Options */}
           <VStack gap="3" align="stretch">
-            {OPTIONS.map((letter) => (
+            {OPTIONS.map((option) => (
               <Flex
-                key={letter}
+                key={option}
                 align="center"
                 gap="4"
                 p="4"
-                bg={getOptionBg(letter)}
+                bg={getBg(option)}
                 border="1.5px solid"
-                borderColor={getOptionBorder(letter)}
+                borderColor={getBorder(option)}
                 borderRadius="16px"
-                cursor={revealed ? "default" : "pointer"}
+                cursor={revealed || isLoading ? "default" : "pointer"}
                 opacity={
                   revealed &&
-                  letter !== currentQuestion.correctOption &&
-                  letter !== selected
+                  option !== selected &&
+                  option !== lastAnswer?.correctOption
                     ? 0.45
                     : 1
                 }
-                onClick={() => pick(letter)}
+                onClick={() => handleAnswer(option)}
                 transition="all 0.2s"
                 _hover={
-                  !revealed
+                  !revealed && !isLoading
                     ? { borderColor: "brand.400", transform: "scale(1.01)" }
                     : {}
                 }
@@ -212,17 +262,17 @@ export default function Quiz() {
                   minW="32px"
                   h="32px"
                   borderRadius="9px"
-                  bg={getLetterBg(letter)}
+                  bg={getLetterBg(option)}
                   display="flex"
                   alignItems="center"
                   justifyContent="center"
                   fontFamily="heading"
                   fontWeight="800"
                   fontSize="13px"
-                  color={getLetterColor(letter)}
+                  color={getLetterColor(option)}
                   transition="all 0.2s"
                 >
-                  {letter}
+                  {option}
                 </Box>
                 <Text
                   fontSize="14px"
@@ -231,64 +281,70 @@ export default function Quiz() {
                   lineHeight="1.4"
                   flex={1}
                 >
-                  {currentQuestion.options[letter]}
+                  {currentQuestion.options[option]}
                 </Text>
-                {revealed && letter === currentQuestion.correctOption && (
-                  <Text fontSize="18px">✅</Text>
+                {isLoading && selected === option && (
+                  <Spinner
+                    borderWidth="2px"
+                    width="16px"
+                    height="16px"
+                    color="brand.600"
+                  />
                 )}
-                {revealed &&
-                  letter === selected &&
-                  letter !== currentQuestion.correctOption && (
-                    <Text fontSize="18px">❌</Text>
-                  )}
               </Flex>
             ))}
           </VStack>
 
-          {/* Explanation */}
-          {revealed && !session.isTrial && (
-            <Box
-              bg="brand.50"
-              border="1px solid"
-              borderColor="brand.100"
-              borderRadius="14px"
-              p="4"
-              style={{ animation: `${popIn} 0.3s ease forwards` }}
-            >
-              <Text
-                fontSize="11px"
-                fontWeight="600"
-                color="brand.600"
-                mb="1"
-                textTransform="uppercase"
-                letterSpacing="0.5px"
-              >
-                Explanation
-              </Text>
-              <Text fontSize="13px" color="gray.700" lineHeight="1.6">
-                {currentQuestion.explanation}
-              </Text>
-            </Box>
-          )}
-
-          {revealed && session.isTrial && (
-            <Box
-              bg="gray.50"
-              border="1.5px dashed"
-              borderColor="gray.200"
-              borderRadius="14px"
-              p="4"
-              textAlign="center"
-            >
-              <Text fontSize="13px" color="gray.500">
-                🔒{" "}
-                <Box as="span" fontWeight="600">
-                  Explanations unlocked
-                </Box>{" "}
-                with full access
-              </Text>
-            </Box>
-          )}
+          {/* Show last answer explanation while loading next question */}
+          {revealed &&
+            session.answers.length > 0 &&
+            (() => {
+              const last = session.answers[session.answers.length - 1];
+              return (
+                <Box>
+                  {!isTrial && last.explanation ? (
+                    <Box
+                      bg="brand.50"
+                      border="1px solid"
+                      borderColor="brand.100"
+                      borderRadius="14px"
+                      p="4"
+                    >
+                      <Text
+                        fontSize="11px"
+                        fontWeight="600"
+                        color="brand.600"
+                        mb="1"
+                        textTransform="uppercase"
+                        letterSpacing="0.5px"
+                      >
+                        Explanation
+                      </Text>
+                      <Text fontSize="13px" color="gray.700" lineHeight="1.6">
+                        {last.explanation}
+                      </Text>
+                    </Box>
+                  ) : isTrial ? (
+                    <Box
+                      bg="gray.50"
+                      border="1.5px dashed"
+                      borderColor="gray.200"
+                      borderRadius="14px"
+                      p="4"
+                      textAlign="center"
+                    >
+                      <Text fontSize="13px" color="gray.500">
+                        🔒{" "}
+                        <Box as="span" fontWeight="600">
+                          Explanations
+                        </Box>{" "}
+                        unlocked with a Day Pass
+                      </Text>
+                    </Box>
+                  ) : null}
+                </Box>
+              );
+            })()}
         </VStack>
       </Container>
     </Box>

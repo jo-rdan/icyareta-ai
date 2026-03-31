@@ -11,8 +11,7 @@ import Pricing from "./pages/Pricing";
 import Dashboard from "./pages/Dashboard";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
-  if (isLoading) return null;
+  const { user } = useAuth();
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 }

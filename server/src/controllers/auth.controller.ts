@@ -8,9 +8,10 @@ const userService = new UserService();
 const otpService = new OtpService();
 const jwtService = new JwtService();
 const emailService = new EmailService();
+// const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
- * POST /api/auth/request-otp
+ * POST /api/v1/auth/request-otp
  * Body: { email: string }
  * Sends a 4-digit OTP to the provided email address.
  */
@@ -32,15 +33,13 @@ export const requestOtp = async (
     await emailService.sendOtp(normalized, code);
   } catch (err) {
     console.error("Email OTP send failed:", err);
-    // Still return success so we don't expose email validity
-    // The user will just not receive the code
   }
 
   res.json({ success: true, message: "OTP sent to your email" });
 };
 
 /**
- * POST /api/auth/verify-otp
+ * POST /api/v1/auth/verify-otp
  * Body: { email: string, code: string, phoneNumber?: string }
  * Verifies OTP and returns JWT + user.
  * phoneNumber is optional — stored for MoMo payments.

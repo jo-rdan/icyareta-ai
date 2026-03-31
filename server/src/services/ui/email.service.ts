@@ -14,8 +14,8 @@ export class EmailService {
    * Uses a clean branded template.
    */
   async sendOtp(email: string, code: string): Promise<void> {
-    await transporter.sendMail({
-      from: `"Icyareta" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+    const emailOptions = {
+      from: "Icyareta <onboarding@resend.dev>",
       to: email,
       subject: `Your Icyareta verification code: ${code}`,
       text: `Your Icyareta verification code is: ${code}\n\nThis code expires in 5 minutes.\n\nIf you did not request this, you can ignore this email.`,
@@ -48,6 +48,24 @@ export class EmailService {
           </p>
         </div>
       `,
-    });
+    };
+    await transporter.sendMail(emailOptions);
   }
 }
+
+// const resend = new Resend(process.env.RESEND_API_KEY);
+
+// export const sendEmail = async (email: string) => {
+//   const { data, error } = await resend.emails.send({
+//     from: "Acme <onboarding@resend.dev>",
+//     to: [email],
+//     subject: "Hello World",
+//     html: "<strong>It works!</strong>",
+//   });
+
+//   if (error) {
+//     return error;
+//   }
+//   console.log("tk", data, error);
+//   return data;
+// };

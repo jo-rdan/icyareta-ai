@@ -28,7 +28,7 @@ const PACK_QUESTION_COUNTS: Record<string, number> = {
 const FREE_TRIAL_COUNT = 5;
 
 /**
- * POST /api/quiz/start
+ * POST /api/v1/quiz/start
  * Body: { subjectId, packType }
  * Checks access, assigns questions, creates session, returns first question.
  */
@@ -119,7 +119,7 @@ export const startQuiz = async (
 };
 
 /**
- * POST /api/quiz/answer
+ * POST /api/v1/quiz/answer
  * Body: { sessionId, selectedOption }
  * Saves answer, returns next question or final score.
  */
@@ -255,7 +255,7 @@ export const submitAnswer = async (
 };
 
 /**
- * GET /api/quiz/session
+ * GET /api/v1/quiz/session
  * Returns the current active session for the user (for resuming).
  */
 export const getSession = async (

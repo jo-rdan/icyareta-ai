@@ -10,9 +10,8 @@ import {
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { useNavigate } from "react-router-dom";
-import { useQuiz } from "../context/useQuiz";
 import { useAuth } from "../context/useAuth";
-import { SUBJECT_WEAK_TOPICS } from "../data/mock";
+import { useQuiz } from "@/context/useQuiz";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -21,14 +20,15 @@ const fadeUp = keyframes`
 
 export default function Score() {
   const navigate = useNavigate();
-  const { session, score, resetQuiz } = useQuiz();
-  const { user, updateUser } = useAuth();
+  const { session, resetQuiz } = useQuiz();
+  const { user } = useAuth();
 
-  if (!session || !score) {
+  if (!session?.score) {
     navigate("/subjects");
     return null;
   }
 
+  const { score, subjectName, isTrial, answers } = session;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const hasPaid = user?.accessStatus === "active";
   const pct = score.percentage;
@@ -39,21 +39,20 @@ export default function Score() {
       : pct >= 60
         ? "Good effort!"
         : "Keep practicing!";
-  const weakTopics = SUBJECT_WEAK_TOPICS[session.subjectId] ?? [];
   const headerBg =
     pct >= 60
       ? "linear-gradient(160deg, #072a16, #1a6b3c)"
       : "linear-gradient(160deg, #3d1a1a, #b83030)";
 
-  if (session.isTrial && user && !user.hasUsedFreeTrial) {
-    updateUser({ hasUsedFreeTrial: true, accessStatus: "trial_used" });
-  }
+  // Derive weak topics from wrong answers
+  const wrongCount = answers.filter((a) => !a.isCorrect).length;
 
   const goBack = () => {
     resetQuiz();
-    navigate("/subjects");
+    navigate("/pricing");
   };
   const goSubscribe = () => {
+    console.log("here");
     resetQuiz();
     navigate("/pricing");
   };
@@ -72,8 +71,7 @@ export default function Score() {
               textTransform="uppercase"
               color="rgba(255,255,255,0.6)"
             >
-              {session.subjectName} •{" "}
-              {session.isTrial ? "Free Trial" : "Practice"}
+              {subjectName} • {isTrial ? "Free Trial" : "Practice"}
             </Text>
             <Heading
               fontFamily="heading"
@@ -149,8 +147,8 @@ export default function Score() {
             </Flex>
           </Box>
 
-          {/* Weak topics */}
-          {weakTopics.length > 0 && (
+          {/* Wrong answers summary */}
+          {wrongCount > 0 && (
             <Box
               bg="white"
               borderRadius="20px"
@@ -165,43 +163,48 @@ export default function Score() {
                 letterSpacing="1px"
                 textTransform="uppercase"
                 color="gray.400"
-                mb="4"
+                mb="3"
               >
-                Areas to improve
+                {wrongCount} answer{wrongCount !== 1 ? "s" : ""} to review
               </Text>
-              <VStack gap="3" align="stretch">
-                {weakTopics.slice(0, 3).map((topic, i) => (
-                  <Flex
-                    key={topic}
-                    align="center"
-                    justify="space-between"
-                    gap="3"
-                  >
-                    <Text fontSize="13px" fontWeight="500" color="gray.700">
-                      {topic}
-                    </Text>
-                    <Box
-                      flex={1}
-                      maxW="120px"
-                      h="6px"
-                      bg="gray.100"
-                      borderRadius="full"
-                    >
-                      <Box
-                        h="full"
-                        w={`${[65, 40, 55][i]}%`}
-                        bg="red.400"
-                        borderRadius="full"
-                      />
+              <VStack gap="2" align="stretch">
+                {answers
+                  .filter((a) => !a.isCorrect)
+                  .map((a, i) => (
+                    <Box key={i} bg="red.50" borderRadius="10px" p="3">
+                      <Flex gap="2" align="center" mb="1">
+                        <Box bg="red.100" px="2" py="0px" borderRadius="6px">
+                          <Text
+                            fontSize="11px"
+                            fontWeight="700"
+                            color="red.600"
+                          >
+                            You: {a.selectedOption}
+                          </Text>
+                        </Box>
+                        <Box bg="green.100" px="2" py="0px" borderRadius="6px">
+                          <Text
+                            fontSize="11px"
+                            fontWeight="700"
+                            color="green.700"
+                          >
+                            Correct: {a.correctOption}
+                          </Text>
+                        </Box>
+                      </Flex>
+                      {!isTrial && a.explanation && (
+                        <Text fontSize="12px" color="gray.600" lineHeight="1.5">
+                          {a.explanation}
+                        </Text>
+                      )}
                     </Box>
-                  </Flex>
-                ))}
+                  ))}
               </VStack>
             </Box>
           )}
 
-          {/* Locked explanations */}
-          {session.isTrial && (
+          {/* Locked explanations for trial */}
+          {isTrial && wrongCount > 0 && (
             <Box
               bg="white"
               borderRadius="20px"
@@ -211,17 +214,6 @@ export default function Score() {
               position="relative"
               overflow="hidden"
             >
-              <Text
-                fontFamily="heading"
-                fontWeight="700"
-                fontSize="12px"
-                letterSpacing="1px"
-                textTransform="uppercase"
-                color="gray.300"
-                mb="3"
-              >
-                Detailed explanations
-              </Text>
               <VStack
                 gap="2"
                 align="stretch"
@@ -237,7 +229,7 @@ export default function Score() {
                 flexDir="column"
                 alignItems="center"
                 justifyContent="center"
-                bg="rgba(255,255,255,0.85)"
+                bg="rgba(255,255,255,0.88)"
                 style={{ backdropFilter: "blur(2px)" }}
                 gap="1"
               >
@@ -246,7 +238,7 @@ export default function Score() {
                   Unlock full explanations
                 </Text>
                 <Text fontSize="12px" color="gray.500">
-                  Subscribe to see why each answer is correct
+                  Get a Day Pass to see why each answer is correct
                 </Text>
               </Box>
             </Box>
@@ -255,7 +247,7 @@ export default function Score() {
           <Separator borderColor="gray.100" />
 
           {/* CTAs */}
-          {session.isTrial ? (
+          {isTrial ? (
             <VStack gap="3">
               <Button
                 w="full"
@@ -265,7 +257,7 @@ export default function Score() {
                 colorPalette="brand"
                 onClick={goSubscribe}
               >
-                Practice More — 5,000 RWF/mo
+                Get Day Pass — 800 RWF
               </Button>
               <Button
                 w="full"
@@ -273,7 +265,7 @@ export default function Score() {
                 h="56px"
                 fontSize="15px"
                 variant="outline"
-                onClick={goBack}
+                // onClick={goBack}
                 borderColor="gray.200"
                 color="gray.600"
               >
@@ -299,7 +291,10 @@ export default function Score() {
                 fontSize="14px"
                 variant="ghost"
                 color="gray.500"
-                onClick={() => navigate("/dashboard")}
+                onClick={() => {
+                  resetQuiz();
+                  navigate("/dashboard");
+                }}
               >
                 View my progress
               </Button>

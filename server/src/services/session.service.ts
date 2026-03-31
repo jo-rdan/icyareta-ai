@@ -103,28 +103,35 @@ export class SessionService {
    */
   async initializeQuiz(
     userId: string,
-    currentSessionId: string,
+    sessionId: string,
     selectedSubjectId: string,
     selectedPackId: string,
     assignedQuestionIds: string[],
   ): Promise<void> {
+    // First abandon any existing in_progress session for this user
+    // so we never have two active sessions at once
     await db
       .update(sessionLogs)
-      .set({
-        sessionId: currentSessionId,
-        selectedSubjectId,
-        selectedPackId,
-        assignedQuestionIds,
-        currentQuestionIndex: 0,
-        lastMenu: "quiz",
-        updatedAt: new Date(),
-      })
+      .set({ status: "abandoned", lastMenu: "exit", updatedAt: new Date() })
       .where(
         and(
           eq(sessionLogs.userId, userId),
           eq(sessionLogs.status, "in_progress"),
         ),
       );
+
+    // Insert a fresh session row — used by both PWA and USSD flows
+    await db.insert(sessionLogs).values({
+      userId,
+      sessionId,
+      selectedSubjectId,
+      selectedPackId,
+      assignedQuestionIds,
+      currentQuestionIndex: 0,
+      answers: [],
+      status: "in_progress",
+      lastMenu: "quiz",
+    });
   }
 
   /**

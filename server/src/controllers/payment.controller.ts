@@ -1,17 +1,17 @@
 import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { MomoService } from "../services/ui/momo.service";
 import {
   UserPurchaseService,
   AccessType,
   ACCESS_PRICES,
 } from "../services/user-purchase.service";
+import { MomoService } from "../services/ui/momo.service";
 
 const momoService = new MomoService();
 const purchaseService = new UserPurchaseService();
 
 /**
- * POST /api/payment/initiate
+ * POST /api/v1/payment/initiate
  * Body: { accessType: "day_pass" }
  * Initiates a MoMo payment request and returns the referenceId.
  */
@@ -54,7 +54,7 @@ export const initiatePayment = async (
 };
 
 /**
- * POST /api/payment/callback
+ * POST /api/v1/payment/callback
  * Called by MTN MoMo — always returns 200.
  */
 export const paymentCallback = async (
@@ -67,7 +67,7 @@ export const paymentCallback = async (
 };
 
 /**
- * POST /api/payment/verify
+ * POST /api/v1/payment/verify
  * Body: { referenceId }
  * PWA polls this after initiating payment. Activates Day Pass on success.
  */

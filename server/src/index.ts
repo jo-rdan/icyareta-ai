@@ -23,10 +23,10 @@ server.use(express.json());
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
 // USSD — Africa's Talking posts here
-server.use("/api", ussdRoutes);
+// server.use("/api", ussdRoutes);
 
 // PWA REST API — all frontend endpoints
-server.use("/api/v1", apiRoutes);
+server.use("/api", apiRoutes);
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 server.get("/health", (_req: Request, res: Response) => {

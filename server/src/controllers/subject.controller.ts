@@ -4,7 +4,7 @@ import { SubjectService } from "../services/subject.service";
 const subjectService = new SubjectService();
 
 /**
- * GET /api/subjects
+ * GET /api/v1/subjects
  * Returns all subjects. No auth required — used on the free trial screen too.
  */
 export const getAllSubjects = async (

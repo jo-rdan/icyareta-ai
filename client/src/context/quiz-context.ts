@@ -1,35 +1,50 @@
 import { createContext } from "react";
-import { type Question } from "../data/mock";
 
 export interface Answer {
   questionId: string;
   selectedOption: "A" | "B" | "C" | "D";
   isCorrect: boolean;
+  correctOption: "A" | "B" | "C" | "D";
+  explanation: string;
+}
+
+export interface ActiveQuestion {
+  id: string;
+  text: string;
+  options: { A: string; B: string; C: string; D: string };
+  index: number;
+  total: number;
 }
 
 export interface QuizSession {
+  sessionId: string;
   subjectId: string;
   subjectName: string;
   packType: string;
-  questions: Question[];
-  answers: Answer[];
-  currentIndex: number;
-  isComplete: boolean;
   isTrial: boolean;
+  currentQuestion: ActiveQuestion | null;
+  answers: Answer[];
+  isComplete: boolean;
+  score: {
+    correct: number;
+    total: number;
+    percentage: number;
+    display: string;
+  } | null;
 }
 
-export interface QuizContextType {
+interface QuizContextType {
   session: QuizSession | null;
+  isLoading: boolean;
+  error: string | null;
   startQuiz: (
     subjectId: string,
     subjectName: string,
     packType: string,
     isTrial: boolean,
-  ) => void;
-  submitAnswer: (option: "A" | "B" | "C" | "D") => void;
+  ) => Promise<void>;
+  submitAnswer: (option: "A" | "B" | "C" | "D") => Promise<void>;
   resetQuiz: () => void;
-  currentQuestion: Question | null;
-  score: { correct: number; total: number; percentage: number } | null;
 }
 
 export const QuizContext = createContext<QuizContextType | null>(null);

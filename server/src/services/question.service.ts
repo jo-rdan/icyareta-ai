@@ -118,9 +118,9 @@ export class QuestionService {
    * and compare against the stored correct option.
    */
   evaluateAnswer(question: Question, userInput: string): EvaluationResult {
-    const selectedOption = INPUT_TO_OPTION[userInput];
+    // const selectedOption = INPUT_TO_OPTION[userInput];
 
-    if (!selectedOption) {
+    if (!userInput) {
       return {
         isCorrect: false,
         correctOption: question.correctOption,
@@ -129,7 +129,7 @@ export class QuestionService {
     }
 
     return {
-      isCorrect: selectedOption === question.correctOption,
+      isCorrect: userInput === question.correctOption,
       correctOption: question.correctOption,
       explanation: question.explanation ?? null,
     };

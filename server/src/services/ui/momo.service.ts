@@ -49,8 +49,24 @@ export class MomoService {
     const referenceId = uuidv4();
     const accessToken = await this.getAccessToken();
 
-    // Strip the + prefix if present — MoMo expects numbers without it
-    const sanitizedPhone = phoneNumber.replace(/^\+/, "");
+    // 1. Clean MSISDN (Strictly digits)
+    const sanitizedPhone = phoneNumber.replace(/\D/g, "");
+
+    // 2. Validate Amount (Must be a positive integer/float as string)
+    if (amount <= 0) throw new Error("Amount must be greater than 0");
+
+    const payload = {
+      amount: amount.toString(),
+      currency: "EUR",
+      externalId: externalId.replace(/\D/g, "").substring(0, 10), // Use numbers only for safety
+      payer: {
+        partyIdType: "MSISDN",
+        partyId: "46733123453", // Standard Sandbox Test Number
+      },
+      // Use only standard ASCII characters
+      payerMessage: "Icyareta Day Pass P6 Access".substring(0, 40),
+      payeeNote: "Icyareta Day Pass P6 Access".substring(0, 40),
+    };
 
     const response = await fetch(
       `${MOMO_BASE_URL}/collection/v1_0/requesttopay`,
@@ -60,28 +76,22 @@ export class MomoService {
           Authorization: `Bearer ${accessToken}`,
           "X-Reference-Id": referenceId,
           "X-Target-Environment": MOMO_ENVIRONMENT,
-          "X-Callback-Url": MOMO_CALLBACK_URL,
-          "Ocp-Apim-Subscription-Key": MOMO_SUBSCRIPTION_KEY,
           "Content-Type": "application/json",
+          "Ocp-Apim-Subscription-Key": MOMO_SUBSCRIPTION_KEY,
+          // REMOVE Callback URL if testing locally without ngrok
+          ...(MOMO_CALLBACK_URL.includes("localhost")
+            ? {}
+            : { "X-Callback-Url": MOMO_CALLBACK_URL }),
         },
-        body: JSON.stringify({
-          amount: amount.toString(),
-          currency: "RWF",
-          externalId,
-          payer: {
-            partyIdType: "MSISDN",
-            partyId: sanitizedPhone,
-          },
-          payerMessage: note,
-          payeeNote: note,
-        }),
+        body: JSON.stringify(payload),
       },
     );
 
     if (!response.ok) {
-      const errorText = await response.text();
+      // 400 errors usually have a JSON body with an "error" code
+      const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        `MoMo requestToPay failed: ${response.status} ${errorText}`,
+        `MoMo Error: ${response.status} - ${errorData.code || "Bad Request"}`,
       );
     }
 

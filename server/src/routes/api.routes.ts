@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requestOtp, verifyOtp } from "../controllers/auth.controller";
-import { getMe, getResults } from "../controllers/user.controller";
+import { getMe, getResults, updatePhone } from "../controllers/user.controller";
 import { getAllSubjects } from "../controllers/subject.controller";
 import {
   startQuiz,
@@ -31,6 +31,9 @@ router.get("/user/results", authenticate, getResults);
 router.post("/quiz/start", authenticate, startQuiz);
 router.post("/quiz/answer", authenticate, submitAnswer);
 router.get("/quiz/session", authenticate, getSession);
+
+// ── User phone update ────────────────────────────────────────────────────────
+router.put("/user/phone", authenticate, updatePhone);
 
 // ── Payment (protected + public callback) ────────────────────────────────────
 router.post("/payment/initiate", authenticate, initiatePayment);

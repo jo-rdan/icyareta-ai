@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import {
   Box,
@@ -11,8 +12,9 @@ import {
   IconButton,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 import { ArrowLeft } from "lucide-react";
-import { useAuth } from "@/context/useAuth";
+import api from "../lib/axios";
 
 type Step = "email" | "otp";
 
@@ -33,18 +35,14 @@ export default function Auth() {
     setError("");
     setIsLoading(true);
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/v1/auth/request-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim().toLowerCase() }),
-        },
-      );
-      if (!res.ok) throw new Error("Failed to send OTP");
+      await api.post("/auth/request-otp", {
+        email: email.trim().toLowerCase(),
+      });
       setStep("otp");
-    } catch {
-      setError("Could not send OTP. Please try again.");
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error || "Could not send code. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -61,8 +59,8 @@ export default function Auth() {
     try {
       await login(email.trim().toLowerCase(), code);
       navigate("/subjects");
-    } catch {
-      setError("Invalid or expired code. Please try again.");
+    } catch (err: any) {
+      setError(err.response?.data?.error || "Invalid or expired code.");
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +149,7 @@ export default function Auth() {
                 borderColor: "brand.600",
                 bg: "white",
               }}
+              onKeyDown={(e) => e.key === "Enter" && sendOtp()}
             />
             <Button
               size="lg"
@@ -174,7 +173,11 @@ export default function Auth() {
                   id={`otp-${i}`}
                   value={digit}
                   onChange={(e) => handleOtpChange(i, e.target.value)}
-                  onKeyDown={(e) => handleOtpKey(i, e)}
+                  onKeyDown={(e) => {
+                    handleOtpKey(i, e);
+                    if (e.key === "Enter" && otp.join("").length === 4)
+                      verifyOtp();
+                  }}
                   maxLength={1}
                   textAlign="center"
                   w="64px"

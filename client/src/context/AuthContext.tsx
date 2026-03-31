@@ -1,38 +1,42 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { AuthContext, type User } from "./auth-context";
+import api from "../lib/axios";
 
 export type { AccessStatus, User } from "./auth-context";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(() =>
+    localStorage.getItem("icy_token"),
+  );
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem("icy_user");
+    return saved ? JSON.parse(saved) : null;
+  });
 
-  useEffect(() => {
-    const savedToken = localStorage.getItem("icy_token");
-    const savedUser = localStorage.getItem("icy_user");
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
-  }, []);
+  const login = async (email: string, code: string) => {
+    const { data } = await api.post("/auth/verify-otp", {
+      email,
+      code,
+    });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const login = async (phoneNumber: string, _otp: string) => {
-    // MOCK — replace with POST /api/auth/verify-otp
-    await new Promise((r) => setTimeout(r, 1000));
-    const mockUser: User = {
-      id: "mock-user-1",
-      phoneNumber,
-      hasUsedFreeTrial: false,
-      accessStatus: "none",
+    // Fetch full access status
+    const meRes = await api.get("/user/me", {
+      headers: { Authorization: `Bearer ${data.token}` },
+    });
+
+    const fullUser: User = {
+      id: data.user.id,
+      email: data.user.email,
+      phoneNumber: data.user.phoneNumber,
+      hasUsedFreeTrial: data.user.hasUsedFreeTrial,
+      accessStatus: meRes.data.accessStatus,
+      accessExpiresAt: meRes.data.accessExpiresAt ?? undefined,
     };
-    const mockToken = "mock-jwt-token";
-    setUser(mockUser);
-    setToken(mockToken);
-    localStorage.setItem("icy_token", mockToken);
-    localStorage.setItem("icy_user", JSON.stringify(mockUser));
+
+    setUser(fullUser);
+    setToken(data.token);
+    localStorage.setItem("icy_token", data.token);
+    localStorage.setItem("icy_user", JSON.stringify(fullUser));
   };
 
   const logout = () => {
@@ -50,9 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, token, isLoading, login, logout, updateUser }}
-    >
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

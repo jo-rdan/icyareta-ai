@@ -12,7 +12,7 @@ const purchaseService = new UserPurchaseService();
 const resultService = new ExamResultService();
 
 /**
- * GET /api/user/me
+ * GET /api/v1/user/me
  * Returns the current user profile plus active access status.
  */
 export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -44,7 +44,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
 };
 
 /**
- * GET /api/user/results
+ * GET /api/v1/user/results
  * Returns all past quiz results for the current user, most recent first.
  */
 export const getResults = async (
@@ -78,4 +78,25 @@ export const getResults = async (
   );
 
   res.json(enriched);
+};
+
+/**
+ * PATCH /api/v1/user/phone
+ * Body: { phoneNumber: string }
+ * Updates the user's MoMo phone number before payment.
+ */
+export const updatePhone = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const userId = req.userId!;
+  const { phoneNumber } = req.body;
+
+  if (!phoneNumber || typeof phoneNumber !== "string") {
+    res.status(400).json({ error: "phoneNumber is required" });
+    return;
+  }
+
+  await userService.updatePhoneNumber(userId, phoneNumber);
+  res.json({ success: true });
 };

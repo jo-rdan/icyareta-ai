@@ -8,13 +8,13 @@ export interface User {
   hasUsedFreeTrial: boolean;
   accessStatus: AccessStatus;
   accessExpiresAt?: string;
+  email?: string;
 }
 
 export interface AuthContextType {
   user: User | null;
   token: string | null;
-  isLoading: boolean;
-  login: (phoneNumber: string, otp: string) => Promise<void>;
+  login: (email: string, code: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
 }
