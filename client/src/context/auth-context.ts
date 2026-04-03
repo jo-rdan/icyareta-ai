@@ -17,6 +17,7 @@ export interface AuthContextType {
   login: (email: string, code: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
+  googleLogin: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);

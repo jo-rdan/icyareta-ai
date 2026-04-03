@@ -13,12 +13,14 @@ import {
   verifyPayment,
 } from "../controllers/payment.controller";
 import { authenticate } from "../middleware/auth.middleware";
+import { signinWithGoogle } from "../controllers/google-auth.controller";
 
 const router = Router();
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 router.post("/auth/request-otp", requestOtp);
 router.post("/auth/verify-otp", verifyOtp);
+router.post("/auth/google-signin", signinWithGoogle);
 
 // ── Subjects (public) ─────────────────────────────────────────────────────────
 router.get("/subjects", getAllSubjects);

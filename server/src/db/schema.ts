@@ -24,17 +24,23 @@ export const sessionStatusEnum = pgEnum("session_status", [
   "abandoned",
 ]);
 
-// Access type for time-based access model.
-// free_trial = one session, 5 Bronze questions, no payment
-// day_pass   = 24 hours, all subjects, all levels, 800 RWF
-export const accessTypeEnum = pgEnum("access_type", ["free_trial", "day_pass"]);
+// free_trial = 1 hour, 5 questions, 0 RWF
+// day_pass   = 24 hours, all subjects, 800 RWF
+// week_pass  = 7 days,  all subjects, 5,000 RWF
+// month_pass = 30 days, all subjects, 9,000 RWF
+export const accessTypeEnum = pgEnum("access_type", [
+  "free_trial",
+  "day_pass",
+  "week_pass",
+  "month_pass",
+]);
 
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 export const users = pgTable("users", {
   id: uuid().defaultRandom().primaryKey(),
   phoneNumber: text().notNull().unique(),
-  email: text().unique(), // used for PWA login + OTP
+  email: text().unique(),
   childName: text(),
   hasUsedFreeTrial: boolean().default(false).notNull(),
   createdAt: timestamp().defaultNow().notNull(),
@@ -59,8 +65,6 @@ export const examPacks = pgTable("exam_packs", {
 });
 
 // ─── User Purchases ───────────────────────────────────────────────────────────
-// accessType: free_trial (0 RWF) or day_pass (800 RWF)
-// expiresAt:  +1h for free_trial, +24h for day_pass
 
 export const userPurchases = pgTable("user_purchases", {
   id: uuid().defaultRandom().primaryKey(),
@@ -152,10 +156,7 @@ export const examPacksRelations = relations(examPacks, ({ one, many }) => ({
 }));
 
 export const userPurchasesRelations = relations(userPurchases, ({ one }) => ({
-  user: one(users, {
-    fields: [userPurchases.userId],
-    references: [users.id],
-  }),
+  user: one(users, { fields: [userPurchases.userId], references: [users.id] }),
 }));
 
 export const questionsRelations = relations(questions, ({ one }) => ({
@@ -170,10 +171,7 @@ export const questionsRelations = relations(questions, ({ one }) => ({
 }));
 
 export const sessionLogsRelations = relations(sessionLogs, ({ one }) => ({
-  user: one(users, {
-    fields: [sessionLogs.userId],
-    references: [users.id],
-  }),
+  user: one(users, { fields: [sessionLogs.userId], references: [users.id] }),
   subject: one(subjects, {
     fields: [sessionLogs.selectedSubjectId],
     references: [subjects.id],
@@ -185,10 +183,7 @@ export const sessionLogsRelations = relations(sessionLogs, ({ one }) => ({
 }));
 
 export const examResultsRelations = relations(examResults, ({ one }) => ({
-  user: one(users, {
-    fields: [examResults.userId],
-    references: [users.id],
-  }),
+  user: one(users, { fields: [examResults.userId], references: [users.id] }),
   subject: one(subjects, {
     fields: [examResults.subjectId],
     references: [subjects.id],

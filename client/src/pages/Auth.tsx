@@ -10,11 +10,14 @@ import {
   VStack,
   Input,
   IconButton,
+  Separator,
+  HStack,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { ArrowLeft } from "lucide-react";
 import api from "../lib/axios";
+import { FcGoogle } from "react-icons/fc";
 
 type Step = "email" | "otp";
 
@@ -24,7 +27,7 @@ export default function Auth() {
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
 
   const sendOtp = async () => {
@@ -162,6 +165,25 @@ export default function Auth() {
               onClick={sendOtp}
             >
               Send Verification Code
+            </Button>
+            <HStack>
+              <Separator flex="1" size={"xs"} />
+              <Text flexShrink="0">Or</Text>
+              <Separator flex="1" size={"xs"} />
+            </HStack>
+            <Button
+              onClick={() => {
+                googleLogin();
+                if (
+                  localStorage.getItem("icy_token") &&
+                  localStorage.getItem("icy_user")
+                ) {
+                  navigate("/subjects");
+                }
+              }}
+            >
+              <FcGoogle />
+              Sign in with Google
             </Button>
           </VStack>
         ) : (

@@ -10,7 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/useAuth";
+import { useAuth } from "@/context/useAuth";
 import { useQuiz } from "@/context/useQuiz";
 
 const fadeUp = keyframes`
@@ -23,14 +23,20 @@ export default function Score() {
   const { session, resetQuiz } = useQuiz();
   const { user } = useAuth();
 
-  if (!session?.score) {
+  // Snapshot everything we need before any reset can null the session.
+  // This is the fix for the bug where clicking "Get Day Pass" would call
+  // resetQuiz(), null the session, trigger the guard below, and send the
+  // user to /subjects instead of /pricing.
+  const score = session?.score ?? null;
+  const subjectName = session?.subjectName ?? "";
+  const isTrial = session?.isTrial ?? false;
+  const answers = session?.answers ?? [];
+
+  if (!score) {
     navigate("/subjects");
     return null;
   }
 
-  const { score, subjectName, isTrial, answers } = session;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const hasPaid = user?.accessStatus === "active";
   const pct = score.percentage;
   const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "🎯" : "💪";
   const message =
@@ -44,17 +50,24 @@ export default function Score() {
       ? "linear-gradient(160deg, #072a16, #1a6b3c)"
       : "linear-gradient(160deg, #3d1a1a, #b83030)";
 
-  // Derive weak topics from wrong answers
-  const wrongCount = answers.filter((a) => !a.isCorrect).length;
+  const wrongAnswers = answers.filter((a) => !a.isCorrect);
 
+  // Always navigate FIRST, then reset.
+  // If we reset first, session becomes null, the guard fires, and the user
+  // gets redirected to /subjects regardless of which button they pressed.
   const goBack = () => {
+    navigate("/subjects");
     resetQuiz();
-    navigate("/pricing");
   };
+
   const goSubscribe = () => {
-    console.log("here");
-    resetQuiz();
     navigate("/pricing");
+    resetQuiz();
+  };
+
+  const goDashboard = () => {
+    navigate("/dashboard");
+    resetQuiz();
   };
 
   return (
@@ -147,8 +160,8 @@ export default function Score() {
             </Flex>
           </Box>
 
-          {/* Wrong answers summary */}
-          {wrongCount > 0 && (
+          {/* Wrong answers review */}
+          {wrongAnswers.length > 0 && (
             <Box
               bg="white"
               borderRadius="20px"
@@ -165,46 +178,41 @@ export default function Score() {
                 color="gray.400"
                 mb="3"
               >
-                {wrongCount} answer{wrongCount !== 1 ? "s" : ""} to review
+                {wrongAnswers.length} answer
+                {wrongAnswers.length !== 1 ? "s" : ""} to review
               </Text>
               <VStack gap="2" align="stretch">
-                {answers
-                  .filter((a) => !a.isCorrect)
-                  .map((a, i) => (
-                    <Box key={i} bg="red.50" borderRadius="10px" p="3">
-                      <Flex gap="2" align="center" mb="1">
-                        <Box bg="red.100" px="2" py="0px" borderRadius="6px">
-                          <Text
-                            fontSize="11px"
-                            fontWeight="700"
-                            color="red.600"
-                          >
-                            You: {a.selectedOption}
-                          </Text>
-                        </Box>
-                        <Box bg="green.100" px="2" py="0px" borderRadius="6px">
-                          <Text
-                            fontSize="11px"
-                            fontWeight="700"
-                            color="green.700"
-                          >
-                            Correct: {a.correctOption}
-                          </Text>
-                        </Box>
-                      </Flex>
-                      {!isTrial && a.explanation && (
-                        <Text fontSize="12px" color="gray.600" lineHeight="1.5">
-                          {a.explanation}
+                {wrongAnswers.map((a, i) => (
+                  <Box key={i} bg="red.50" borderRadius="10px" p="3">
+                    <Flex gap="2" align="center" mb="1">
+                      <Box bg="red.100" px="2" borderRadius="6px">
+                        <Text fontSize="11px" fontWeight="700" color="red.600">
+                          You: {a.selectedOption}
                         </Text>
-                      )}
-                    </Box>
-                  ))}
+                      </Box>
+                      <Box bg="green.100" px="2" borderRadius="6px">
+                        <Text
+                          fontSize="11px"
+                          fontWeight="700"
+                          color="green.700"
+                        >
+                          Correct: {a.correctOption}
+                        </Text>
+                      </Box>
+                    </Flex>
+                    {!isTrial && a.explanation && (
+                      <Text fontSize="12px" color="gray.600" lineHeight="1.5">
+                        {a.explanation}
+                      </Text>
+                    )}
+                  </Box>
+                ))}
               </VStack>
             </Box>
           )}
 
-          {/* Locked explanations for trial */}
-          {isTrial && wrongCount > 0 && (
+          {/* Locked explanations for trial users */}
+          {isTrial && wrongAnswers.length > 0 && (
             <Box
               bg="white"
               borderRadius="20px"
@@ -238,7 +246,7 @@ export default function Score() {
                   Unlock full explanations
                 </Text>
                 <Text fontSize="12px" color="gray.500">
-                  Get a Day Pass to see why each answer is correct
+                  See exactly why each answer is correct
                 </Text>
               </Box>
             </Box>
@@ -257,7 +265,7 @@ export default function Score() {
                 colorPalette="brand"
                 onClick={goSubscribe}
               >
-                Get Day Pass — 800 RWF
+                Unlock Full Access — from 800 RWF
               </Button>
               <Button
                 w="full"
@@ -265,9 +273,9 @@ export default function Score() {
                 h="56px"
                 fontSize="15px"
                 variant="outline"
-                // onClick={goBack}
                 borderColor="gray.200"
                 color="gray.600"
+                onClick={goBack}
               >
                 Back to subjects
               </Button>
@@ -291,10 +299,7 @@ export default function Score() {
                 fontSize="14px"
                 variant="ghost"
                 color="gray.500"
-                onClick={() => {
-                  resetQuiz();
-                  navigate("/dashboard");
-                }}
+                onClick={goDashboard}
               >
                 View my progress
               </Button>

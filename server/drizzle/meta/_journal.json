@@ -57,6 +57,13 @@
       "when": 1774389543516,
       "tag": "0007_abnormal_puff_adder",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775237491619,
+      "tag": "0008_steady_ulik",
+      "breakpoints": true
     }
   ]
 }

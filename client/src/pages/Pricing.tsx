@@ -7,6 +7,7 @@ import {
   Heading,
   Text,
   VStack,
+  HStack,
   List,
   IconButton,
   Dialog,
@@ -14,36 +15,90 @@ import {
   Spinner,
   Input,
 } from "@chakra-ui/react";
-import { LuCheck } from "react-icons/lu";
+import { LuCheck, LuStar, LuZap } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/useAuth";
 import api from "@/lib/axios";
 
-const API = import.meta.env.VITE_API_URL || "";
+type PlanKey = "day_pass" | "week_pass" | "month_pass";
+
+interface Plan {
+  key: PlanKey;
+  label: string;
+  price: number;
+  period: string;
+  badge: string | null;
+  badgeColor: string;
+  headline: string;
+  subline: string;
+  icon: React.ReactNode;
+  popular: boolean;
+}
+
+const PLANS: Plan[] = [
+  {
+    key: "day_pass",
+    label: "Day Pass",
+    price: 800,
+    period: "day",
+    badge: null,
+    badgeColor: "",
+    headline: "Try it today",
+    subline: "Perfect for a focused practice session before an exam.",
+    icon: <LuZap size={16} />,
+    popular: false,
+  },
+  {
+    key: "week_pass",
+    label: "Week Pass",
+    price: 5000,
+    period: "week",
+    badge: "Most popular",
+    badgeColor: "#f59e0b",
+    headline: "Best for exam prep",
+    subline: "7 days of daily practice — the sweet spot for real improvement.",
+    icon: <LuStar size={16} />,
+    popular: true,
+  },
+  {
+    key: "month_pass",
+    label: "Month Pass",
+    price: 9000,
+    period: "month",
+    badge: "Save 63%",
+    badgeColor: "#1a6b3c",
+    headline: "Full season coverage",
+    subline:
+      "30 days at just 300 RWF/day. The smartest investment before July.",
+    icon: <LuStar size={16} />,
+    popular: false,
+  },
+];
 
 const FEATURES = [
-  "All 4 P6 subjects unlocked",
-  "Bronze, Silver & Gold difficulty levels",
-  "480+ curriculum-aligned questions",
-  "Detailed explanations for every answer",
-  "Progress tracking & weak topic analysis",
-  "Works offline — no data needed",
-  "Full day of unlimited practice",
+  "All 4 P6 subjects — Maths, English, Science, Social Studies",
+  "3 difficulty levels: Bronze, Silver & Gold",
+  "480+ real P6 curriculum questions",
+  "Step-by-step explanations for every answer",
+  "Instant score with wrong-answer review",
+  "Progress tracking so you know what to fix",
+  "Works offline — no data needed mid-session",
 ];
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const { user, token, updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
+  const [selected, setSelected] = useState<PlanKey>("week_pass");
   const [phone, setPhone] = useState(
     user?.phoneNumber && user.phoneNumber !== user.email
-      ? user.phoneNumber
+      ? user.phoneNumber.replace("+250", "")
       : "",
   );
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [referenceId, setReferenceId] = useState("");
   const [error, setError] = useState("");
+
+  const activePlan = PLANS.find((p) => p.key === selected)!;
 
   const handlePay = async () => {
     if (!user) {
@@ -51,9 +106,9 @@ export default function Pricing() {
       return;
     }
 
-    const sanitized = phone.replace(/\D/g, "");
-    if (sanitized.length < 9) {
-      setError("Enter your MTN number to receive the MoMo payment request");
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length < 9) {
+      setError("Enter your 9-digit MTN number to receive the MoMo prompt");
       return;
     }
 
@@ -61,85 +116,70 @@ export default function Pricing() {
     setIsLoading(true);
 
     try {
-      // Update phone number on the account if needed
+      const fullPhone = `+250${digits.slice(-9)}`;
+
       if (!user.phoneNumber || user.phoneNumber === user.email) {
-        await api.put("/user/phone", {
-          phoneNumber: `+250${sanitized.slice(-9)}`,
-        });
+        await api.patch("/api/user/phone", { phoneNumber: fullPhone });
       }
 
-      // Initiate MoMo payment
-      const res = await api.post("/payment/initiate", {
-        accessType: "day_pass",
+      const { data } = await api.post("/api/payment/initiate", {
+        accessType: selected,
       });
 
-      if (res.status !== 200) {
-        const err = await res.data;
-        setError(err.error || "Payment initiation failed");
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.data;
-      setReferenceId(data.referenceId);
       setShowModal(true);
-
-      // Poll for payment confirmation
-      pollPaymentStatus(data.referenceId);
-    } catch {
-      setError("Something went wrong. Please try again.");
+      await pollPaymentStatus(data.referenceId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error ||
+          "Payment initiation failed. Please try again.",
+      );
       setIsLoading(false);
     }
   };
 
-  const pollPaymentStatus = async (refId: string) => {
-    const maxAttempts = 12; // 2 minutes total
+  const pollPaymentStatus = async (referenceId: string) => {
+    const MAX = 12;
     let attempts = 0;
 
-    const poll = async () => {
+    const check = async (): Promise<void> => {
       attempts++;
       try {
-        const res = await fetch(`${API}/api/v1/payment/verify`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ referenceId: refId }),
+        const { data } = await api.post("/api/payment/verify", {
+          referenceId,
+          accessType: selected,
         });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === "SUCCESSFUL") {
-            setShowModal(false);
-            setIsLoading(false);
-            updateUser({ accessStatus: "active" });
-            navigate("/subjects");
-            return;
-          }
-          if (data.status === "FAILED") {
-            setShowModal(false);
-            setIsLoading(false);
-            setError("Payment was declined. Please try again.");
-            return;
-          }
+        if (data.status === "SUCCESSFUL") {
+          setShowModal(false);
+          setIsLoading(false);
+          updateUser({ accessStatus: "active" });
+          navigate("/subjects");
+          return;
+        }
+
+        if (data.status === "FAILED") {
+          setShowModal(false);
+          setIsLoading(false);
+          setError("Payment was declined. Please try again.");
+          return;
         }
       } catch {
-        // continue polling
+        // Network blip — keep polling
       }
 
-      if (attempts < maxAttempts) {
-        setTimeout(poll, 10000); // poll every 10 seconds
-      } else {
-        setShowModal(false);
-        setIsLoading(false);
-        setError(
-          "Payment timed out. If your MoMo was debited, contact support.",
-        );
+      if (attempts < MAX) {
+        await new Promise((r) => setTimeout(r, 10000));
+        return check();
       }
+
+      setShowModal(false);
+      setIsLoading(false);
+      setError("Payment timed out. If MoMo was debited, contact support.");
     };
 
-    setTimeout(poll, 5000); // first check after 5 seconds
+    await new Promise((r) => setTimeout(r, 5000));
+    return check();
   };
 
   return (
@@ -164,78 +204,126 @@ export default function Pricing() {
               <Text fontSize="18px">←</Text>
             </IconButton>
             <Text fontFamily="heading" fontWeight="800" fontSize="16px">
-              Get a Day Pass
+              Choose your plan
             </Text>
           </Flex>
         </Container>
       </Box>
 
       <Container maxW="container.sm" px="6" py="8">
-        <VStack gap="6" align="stretch">
-          {/* Plan card */}
-          <Box
-            style={{ background: "linear-gradient(160deg, #072a16, #1a6b3c)" }}
-            borderRadius="24px"
-            p="6"
-            position="relative"
-            overflow="hidden"
-          >
-            <Box
-              position="absolute"
-              top="-40px"
-              right="-40px"
-              w="160px"
-              h="160px"
-              borderRadius="full"
-              bg="rgba(255,255,255,0.05)"
-            />
-            <VStack align="flex-start" gap="2">
-              <Box
-                bg="rgba(126,232,162,0.2)"
-                px="3"
-                py="1"
-                borderRadius="full"
-                border="1px solid rgba(126,232,162,0.3)"
-              >
-                <Text
-                  fontSize="11px"
-                  fontWeight="600"
-                  color="#7ee8a2"
-                  letterSpacing="0.8px"
+        <VStack gap="7" align="stretch">
+          {/* Hook */}
+          <VStack align="flex-start" gap="1">
+            <Heading
+              fontFamily="heading"
+              fontSize={{ base: "26px", md: "30px" }}
+              fontWeight="800"
+              letterSpacing="-1px"
+            >
+              Invest in your child's exam success
+            </Heading>
+            <Text color="gray.500" fontSize="14px" lineHeight="1.6">
+              A private tutor costs 15,000–30,000 RWF per session. Icyareta
+              gives unlimited P6 practice for less than a cup of juice a day.
+            </Text>
+          </VStack>
+
+          {/* Plan selector */}
+          <VStack gap="3" align="stretch">
+            {PLANS.map((plan) => {
+              const isActive = selected === plan.key;
+              return (
+                <Box
+                  key={plan.key}
+                  onClick={() => setSelected(plan.key)}
+                  cursor="pointer"
+                  bg={isActive ? "#e8f5ee" : "white"}
+                  border="2px solid"
+                  borderColor={isActive ? "#1a6b3c" : "gray.150"}
+                  borderRadius="18px"
+                  p="4"
+                  position="relative"
+                  transition="all 0.15s"
+                  _hover={{ borderColor: isActive ? "#1a6b3c" : "gray.300" }}
                 >
-                  FULL ACCESS · ALL SUBJECTS
-                </Text>
-              </Box>
-              <Flex align="flex-end" gap="2" mt="1">
-                <Heading
-                  fontFamily="heading"
-                  fontSize="56px"
-                  fontWeight="800"
-                  color="white"
-                  lineHeight="1"
-                  letterSpacing="-2px"
-                >
-                  800
-                </Heading>
-                <Text
-                  color="rgba(255,255,255,0.7)"
-                  fontSize="16px"
-                  mb="2"
-                  fontWeight="500"
-                >
-                  RWF / day
-                </Text>
-              </Flex>
-              <Text
-                color="rgba(255,255,255,0.65)"
-                fontSize="13px"
-                lineHeight="1.6"
-              >
-                One Day Pass. Unlimited practice across all P6 subjects and
-                difficulty levels for 24 hours.
-              </Text>
-            </VStack>
-          </Box>
+                  {/* Popular / Save badge */}
+                  {plan.badge && (
+                    <Box
+                      position="absolute"
+                      top="-11px"
+                      right="16px"
+                      bg={plan.badgeColor}
+                      px="3"
+                      py="1"
+                      borderRadius="full"
+                    >
+                      <Text
+                        fontSize="10px"
+                        fontWeight="700"
+                        color="white"
+                        letterSpacing="0.5px"
+                      >
+                        {plan.badge.toUpperCase()}
+                      </Text>
+                    </Box>
+                  )}
+
+                  <Flex align="center" justify="space-between">
+                    <VStack align="flex-start" gap="0">
+                      <HStack gap="2">
+                        <Text
+                          fontFamily="heading"
+                          fontWeight="800"
+                          fontSize="15px"
+                          color={isActive ? "#1a6b3c" : "gray.800"}
+                        >
+                          {plan.label}
+                        </Text>
+                      </HStack>
+                      <Text fontSize="12px" color="gray.400" mt="1px">
+                        {plan.subline}
+                      </Text>
+                    </VStack>
+                    <VStack align="flex-end" gap="0" flexShrink={0} ml="4">
+                      <Text
+                        fontFamily="heading"
+                        fontWeight="800"
+                        fontSize="18px"
+                        color={isActive ? "#1a6b3c" : "gray.800"}
+                      >
+                        {plan.price.toLocaleString()} RWF
+                      </Text>
+                      <Text fontSize="11px" color="gray.400">
+                        per {plan.period}
+                      </Text>
+                    </VStack>
+                  </Flex>
+
+                  {/* Per-day breakdown for multi-day plans */}
+                  {plan.key === "week_pass" && (
+                    <Box
+                      mt="3"
+                      bg="amber.50"
+                      borderRadius="8px"
+                      px="3"
+                      py="1.5"
+                    >
+                      <Text fontSize="11px" color="amber.700" fontWeight="600">
+                        💰 Just 714 RWF/day — cheaper than the Day Pass
+                      </Text>
+                    </Box>
+                  )}
+                  {plan.key === "month_pass" && (
+                    <Box mt="3" bg="#e8f5ee" borderRadius="8px" px="3" py="1.5">
+                      <Text fontSize="11px" color="#1a6b3c" fontWeight="600">
+                        🏆 Only 300 RWF/day — your best value before July exams
+                      </Text>
+                    </Box>
+                  )}
+                </Box>
+              );
+            })}
+          </VStack>
 
           {/* What's included */}
           <Box
@@ -254,23 +342,35 @@ export default function Pricing() {
               color="gray.400"
               mb="4"
             >
-              What's included
+              Every plan includes
             </Text>
             <List.Root as="ul" gap="3" listStyle="none">
               {FEATURES.map((f) => (
-                <List.Item key={f} display="flex" alignItems="center" gap="3">
+                <List.Item
+                  key={f}
+                  display="flex"
+                  alignItems="flex-start"
+                  gap="3"
+                >
                   <Box
                     minW="20px"
                     h="20px"
-                    bg="brand.50"
+                    mt="1px"
+                    bg="#e8f5ee"
                     borderRadius="6px"
                     display="flex"
                     alignItems="center"
                     justifyContent="center"
+                    flexShrink={0}
                   >
                     <LuCheck size={10} color="#1a6b3c" />
                   </Box>
-                  <Text fontSize="13px" color="gray.700" fontWeight="500">
+                  <Text
+                    fontSize="13px"
+                    color="gray.700"
+                    fontWeight="500"
+                    lineHeight="1.5"
+                  >
                     {f}
                   </Text>
                 </List.Item>
@@ -278,27 +378,29 @@ export default function Pricing() {
             </List.Root>
           </Box>
 
-          {/* Value comparison */}
+          {/* Parent trust signal */}
           <Box
-            bg="orange.50"
+            bg="white"
             border="1px solid"
-            borderColor="orange.100"
+            borderColor="gray.100"
             borderRadius="16px"
             p="4"
           >
             <Text
               fontSize="13px"
-              color="orange.700"
-              lineHeight="1.6"
-              fontWeight="500"
+              color="gray.600"
+              lineHeight="1.7"
+              fontStyle="italic"
             >
-              💡 A private tutor in Kigali costs{" "}
-              <strong>15,000–30,000 RWF per session.</strong> One Icyareta Day
-              Pass is <strong>800 RWF</strong> — less than a cup of juice.
+              "I could see my daughter's confidence grow after just one week of
+              practice. She passed her mock with 78%."
+            </Text>
+            <Text fontSize="12px" color="gray.400" fontWeight="600" mt="2">
+              — Parent of P6 student, Kigali
             </Text>
           </Box>
 
-          {/* MoMo phone number */}
+          {/* MoMo number input */}
           <Box
             bg="white"
             borderRadius="20px"
@@ -348,14 +450,14 @@ export default function Pricing() {
                 bg="white"
                 fontSize="15px"
                 _focus={{
-                  borderColor: "brand.600",
+                  borderColor: "#1a6b3c",
                   boxShadow: "none",
                   bg: "white",
                 }}
               />
             </Flex>
             <Text fontSize="12px" color="gray.400" mt="2">
-              You will receive a MoMo prompt on this number.
+              You'll receive a MoMo prompt on this number.
             </Text>
           </Box>
 
@@ -374,21 +476,24 @@ export default function Pricing() {
             </Box>
           )}
 
+          {/* CTA */}
           <Button
             size="lg"
             w="full"
-            h="56px"
+            h="60px"
             fontSize="16px"
-            colorPalette="brand"
+            bg="#1a6b3c"
+            color="white"
+            _hover={{ bg: "#145530" }}
             loading={isLoading}
             onClick={handlePay}
           >
-            Get Day Pass — 800 RWF
+            Get {activePlan.label} — {activePlan.price.toLocaleString()} RWF
           </Button>
 
           <Text textAlign="center" fontSize="12px" color="gray.400">
-            Secure payment via MTN Mobile Money. Valid for 24 hours from
-            activation.
+            Secure payment via MTN Mobile Money · Activates instantly · No
+            subscription
           </Text>
         </VStack>
       </Container>
@@ -422,12 +527,13 @@ export default function Pricing() {
                     Approve on your phone
                   </Heading>
                   <Text fontSize="14px" color="gray.500" lineHeight="1.6">
-                    A MoMo payment request of <strong>800 RWF</strong> has been
-                    sent to your phone. Approve it to activate your Day Pass
-                    instantly.
+                    A MoMo payment of{" "}
+                    <strong>{activePlan.price.toLocaleString()} RWF</strong> has
+                    been sent to your phone. Approve it to activate your{" "}
+                    {activePlan.label} instantly.
                   </Text>
-                  <Box bg="brand.50" borderRadius="12px" px="4" py="3" w="full">
-                    <Text fontSize="12px" color="brand.600" fontWeight="600">
+                  <Box bg="#e8f5ee" borderRadius="12px" px="4" py="3" w="full">
+                    <Text fontSize="12px" color="#1a6b3c" fontWeight="600">
                       📱 Waiting for MoMo confirmation...
                     </Text>
                   </Box>

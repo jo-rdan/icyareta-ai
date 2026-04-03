@@ -25,10 +25,6 @@ export default function Quiz() {
   const { session, isLoading, submitAnswer } = useQuiz();
   const [selected, setSelected] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
-  const [lastAnswer, setLastAnswer] = useState<{
-    correctOption: string;
-    explanation: string;
-  } | null>(null);
 
   useEffect(() => {
     if (!session) {
@@ -40,12 +36,10 @@ export default function Quiz() {
     }
   }, [session, navigate]);
 
-  // Reset selection state when question changes
+  // Reset per-question UI state when the question changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelected(null);
     setRevealed(false);
-    setLastAnswer(null);
   }, [session?.currentQuestion?.id]);
 
   if (!session || !session.currentQuestion) {
@@ -67,72 +61,51 @@ export default function Quiz() {
     );
   }
 
-  const { currentQuestion, isTrial } = session;
+  const { currentQuestion, isTrial, answers } = session;
   const { index, total } = currentQuestion;
   const progress = (index / total) * 100;
 
-  const pick = async (opt: (typeof OPTIONS)[number]) => {
+  // The last answer in the list — used to show correct/wrong colours and explanation
+  const lastAnswer = answers.length > 0 ? answers[answers.length - 1] : null;
+
+  const handleAnswer = async (opt: (typeof OPTIONS)[number]) => {
     if (revealed || isLoading) return;
     setSelected(opt);
     setRevealed(true);
-
-    // Get the answer details before submitting moves to next question
-    await new Promise((r) => setTimeout(r, 900));
+    // Brief pause so the user can see their selection highlighted before we advance
+    await new Promise((r) => setTimeout(r, 850));
     await submitAnswer(opt);
   };
 
   const getBg = (letter: string) => {
     if (!revealed) return selected === letter ? "#e8f5ee" : "white";
-    if (
-      letter === lastAnswer?.correctOption ||
-      (!lastAnswer && letter === selected)
-    )
-      return "#e8f5ee";
-    if (letter === selected) return "#fdeaea";
+    if (letter === selected && lastAnswer?.isCorrect) return "#e8f5ee";
+    if (letter === selected && !lastAnswer?.isCorrect) return "#fdeaea";
+    if (letter === lastAnswer?.correctOption) return "#e8f5ee";
     return "white";
   };
 
   const getBorder = (letter: string) => {
     if (!revealed) return selected === letter ? "#1a6b3c" : "#e4e4e7";
-    if (
-      letter === lastAnswer?.correctOption ||
-      (!lastAnswer && letter === selected)
-    )
-      return "#1a6b3c";
-    if (letter === selected) return "#b83030";
+    if (letter === selected && lastAnswer?.isCorrect) return "#1a6b3c";
+    if (letter === selected && !lastAnswer?.isCorrect) return "#b83030";
+    if (letter === lastAnswer?.correctOption) return "#1a6b3c";
     return "#e4e4e7";
   };
 
   const getLetterBg = (letter: string) => {
     if (!revealed) return selected === letter ? "#1a6b3c" : "#f4f4f5";
-    if (
-      letter === lastAnswer?.correctOption ||
-      (!lastAnswer && letter === selected)
-    )
-      return "#1a6b3c";
-    if (letter === selected) return "#b83030";
+    if (letter === selected && lastAnswer?.isCorrect) return "#1a6b3c";
+    if (letter === selected && !lastAnswer?.isCorrect) return "#b83030";
+    if (letter === lastAnswer?.correctOption) return "#1a6b3c";
     return "#f4f4f5";
   };
 
   const getLetterColor = (letter: string) => {
     if (!revealed) return selected === letter ? "white" : "#71717a";
-    const correct = lastAnswer?.correctOption ?? selected;
-    if (letter === correct) return "white";
     if (letter === selected) return "white";
+    if (letter === lastAnswer?.correctOption) return "white";
     return "#d4d4d8";
-  };
-
-  // Track the last answer for showing correct option
-  const handleAnswer = async (opt: (typeof OPTIONS)[number]) => {
-    if (revealed || isLoading) return;
-    setSelected(opt);
-    setRevealed(true);
-
-    // Store which answer we submitted before submitAnswer clears the question
-    const answerRecord = session.answers[session.answers.length]; // will be added
-    await new Promise((r) => setTimeout(r, 850));
-
-    await submitAnswer(opt);
   };
 
   return (
@@ -175,7 +148,7 @@ export default function Quiz() {
             <Box
               h="full"
               w={`${progress}%`}
-              bg="green.500"
+              bg="#1a6b3c"
               borderRadius="full"
               transition="width 0.3s"
             />
@@ -295,56 +268,49 @@ export default function Quiz() {
             ))}
           </VStack>
 
-          {/* Show last answer explanation while loading next question */}
+          {/* Explanation — shown after answering while loading next question */}
           {revealed &&
-            session.answers.length > 0 &&
-            (() => {
-              const last = session.answers[session.answers.length - 1];
-              return (
-                <Box>
-                  {!isTrial && last.explanation ? (
-                    <Box
-                      bg="brand.50"
-                      border="1px solid"
-                      borderColor="brand.100"
-                      borderRadius="14px"
-                      p="4"
-                    >
-                      <Text
-                        fontSize="11px"
-                        fontWeight="600"
-                        color="brand.600"
-                        mb="1"
-                        textTransform="uppercase"
-                        letterSpacing="0.5px"
-                      >
-                        Explanation
-                      </Text>
-                      <Text fontSize="13px" color="gray.700" lineHeight="1.6">
-                        {last.explanation}
-                      </Text>
-                    </Box>
-                  ) : isTrial ? (
-                    <Box
-                      bg="gray.50"
-                      border="1.5px dashed"
-                      borderColor="gray.200"
-                      borderRadius="14px"
-                      p="4"
-                      textAlign="center"
-                    >
-                      <Text fontSize="13px" color="gray.500">
-                        🔒{" "}
-                        <Box as="span" fontWeight="600">
-                          Explanations
-                        </Box>{" "}
-                        unlocked with a Day Pass
-                      </Text>
-                    </Box>
-                  ) : null}
-                </Box>
-              );
-            })()}
+            lastAnswer &&
+            (!isTrial && lastAnswer.explanation ? (
+              <Box
+                bg="brand.50"
+                border="1px solid"
+                borderColor="brand.100"
+                borderRadius="14px"
+                p="4"
+              >
+                <Text
+                  fontSize="11px"
+                  fontWeight="600"
+                  color="brand.600"
+                  mb="1"
+                  textTransform="uppercase"
+                  letterSpacing="0.5px"
+                >
+                  Explanation
+                </Text>
+                <Text fontSize="13px" color="gray.700" lineHeight="1.6">
+                  {lastAnswer.explanation}
+                </Text>
+              </Box>
+            ) : isTrial ? (
+              <Box
+                bg="gray.50"
+                border="1.5px dashed"
+                borderColor="gray.200"
+                borderRadius="14px"
+                p="4"
+                textAlign="center"
+              >
+                <Text fontSize="13px" color="gray.500">
+                  🔒{" "}
+                  <Box as="span" fontWeight="600">
+                    Explanations
+                  </Box>{" "}
+                  unlocked with a Day Pass
+                </Text>
+              </Box>
+            ) : null)}
         </VStack>
       </Container>
     </Box>

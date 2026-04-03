@@ -10,10 +10,11 @@ import { MomoService } from "../services/ui/momo.service";
 const momoService = new MomoService();
 const purchaseService = new UserPurchaseService();
 
+const PAID_ACCESS_TYPES: AccessType[] = ["day_pass", "week_pass", "month_pass"];
+
 /**
- * POST /api/v1/payment/initiate
- * Body: { accessType: "day_pass" }
- * Initiates a MoMo payment request and returns the referenceId.
+ * POST /api/payment/initiate
+ * Body: { accessType: "day_pass" | "week_pass" | "month_pass" }
  */
 export const initiatePayment = async (
   req: AuthRequest,
@@ -23,53 +24,51 @@ export const initiatePayment = async (
   const phoneNumber = req.phoneNumber!;
   const { accessType } = req.body as { accessType: AccessType };
 
-  if (accessType !== "day_pass") {
-    res.status(400).json({ error: "accessType must be day_pass" });
+  if (!PAID_ACCESS_TYPES.includes(accessType)) {
+    res
+      .status(400)
+      .json({ error: "accessType must be day_pass, week_pass, or month_pass" });
     return;
   }
 
   const existing = await purchaseService.getActivePurchase(userId);
-  if (existing && existing.accessType === "day_pass") {
-    res.status(409).json({ error: "You already have an active Day Pass" });
+  if (existing && PAID_ACCESS_TYPES.includes(existing.accessType)) {
+    res.status(409).json({
+      error: `You already have an active ${purchaseService.getAccessLabel(existing.accessType)}`,
+    });
     return;
   }
 
-  const amount = ACCESS_PRICES.day_pass;
+  const amount = ACCESS_PRICES[accessType];
   const externalId = `ICY-${userId.slice(0, 8)}-${Date.now()}`;
+  const label = purchaseService.getAccessLabel(accessType);
 
   const referenceId = await momoService.requestToPay(
     phoneNumber,
     amount,
     externalId,
-    "Icyareta Day Pass — Full P6 Access",
+    `Icyareta ${label} — Full P6 Access`,
   );
 
-  res.json({
-    referenceId,
-    amount,
-    accessType: "day_pass",
-    message:
-      "Payment request sent to your phone. Approve it to activate your Day Pass.",
-  });
+  res.json({ referenceId, amount, accessType, label });
 };
 
 /**
- * POST /api/v1/payment/callback
- * Called by MTN MoMo — always returns 200.
+ * POST /api/payment/callback
+ * Called by MTN MoMo — always returns 200 immediately.
  */
 export const paymentCallback = async (
   req: Request,
   res: Response,
 ): Promise<void> => {
-  // Acknowledge immediately — payment activation handled via /verify polling
-  console.log("MoMo callback received:", JSON.stringify(req.body));
+  console.log("MoMo callback:", JSON.stringify(req.body));
   res.status(200).json({ received: true });
 };
 
 /**
- * POST /api/v1/payment/verify
+ * POST /api/payment/verify
  * Body: { referenceId }
- * PWA polls this after initiating payment. Activates Day Pass on success.
+ * PWA polls this after initiating payment. Creates purchase on success.
  */
 export const verifyPayment = async (
   req: AuthRequest,
@@ -83,17 +82,25 @@ export const verifyPayment = async (
     return;
   }
 
-  // Check if already activated for this reference
+  // Already activated — idempotent
   const existing = await purchaseService.getActivePurchase(userId);
   if (existing?.transactionReference === referenceId) {
-    res.json({ status: "SUCCESSFUL", activated: true, alreadyActive: true });
+    res.json({ status: "SUCCESSFUL", activated: true });
     return;
   }
 
   const result = await momoService.getPaymentStatus(referenceId);
 
   if (result.status === "SUCCESSFUL") {
-    await purchaseService.createPurchase(userId, "day_pass", referenceId);
+    // We need the accessType — it's embedded in the externalId prefix but we don't store it.
+    // Safest approach: the PWA sends it along with the referenceId.
+    const { accessType } = req.body as { accessType?: AccessType };
+    const resolvedType: AccessType =
+      accessType && PAID_ACCESS_TYPES.includes(accessType)
+        ? accessType
+        : "day_pass";
+
+    await purchaseService.createPurchase(userId, resolvedType, referenceId);
     res.json({ status: "SUCCESSFUL", activated: true });
     return;
   }
