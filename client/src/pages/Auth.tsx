@@ -37,8 +37,6 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [childName, setChildName] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isNewUser, setIsNewUser] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [modalEssentials, setModalEssentials] = useState({
@@ -86,7 +84,6 @@ export default function Auth() {
       await login(email.trim().toLowerCase(), code);
       // If childName is not set, ask for it
       if (!user?.childName) {
-        setIsNewUser(true);
         setStep("childName");
         setIsLoading(false);
         return;
@@ -130,7 +127,6 @@ export default function Auth() {
       googleLogin();
       // If childName is not set, ask for it
       if (!user?.childName) {
-        setIsNewUser(true);
         setStep("childName");
         setIsLoading(false);
         return;

@@ -14,7 +14,7 @@ import { useQuiz } from "@/context/useQuiz";
 import { useTranslation } from "react-i18next";
 import { capitalize } from "@/lib/capitalize";
 import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
