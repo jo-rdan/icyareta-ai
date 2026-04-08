@@ -1,3 +1,18 @@
+/**
+ * Xeta — Question Ingestion Pipeline
+ *
+ * Reads PDF exam papers from /data, sends them to Gemini, and inserts
+ * generated questions into the database.
+ *
+ * Usage:
+ *   Place PDF files named  YYYY_P6_SubjectName.pdf  in the /data folder.
+ *   Then run:  npx tsx src/scripts/ingest.ts
+ *
+ * Each PDF produces ~40 questions in a single "full_mock" pack per subject.
+ * Running the script again with the same PDFs is safe — it appends questions
+ * to existing packs rather than duplicating them.
+ */
+
 import fs from "fs";
 import path from "path";
 import { PDFParse } from "pdf-parse";
@@ -9,39 +24,20 @@ import { eq, and } from "drizzle-orm";
 
 dotenv.config();
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
-const PACK_CONFIGS = [
-  {
-    packType: "diagnostic" as const,
-    price: 500,
-    label: "Bronze / Diagnostic",
-    difficulty: "straightforward recall",
-    instruction:
-      "RECALL ONLY. Student recognises the answer from memory. Direct questions like 'What is X?' or 'Which of these is Y?'. Options are short single words or short phrases. No calculations required.",
-  },
-  {
-    packType: "daily_drill" as const,
-    price: 1000,
-    label: "Silver / Daily Drill",
-    difficulty: "application and understanding",
-    instruction:
-      "APPLICATION. Student must apply a concept, complete a simple calculation, or identify a concept used in a sentence or scenario. Distractors are plausible common mistakes students make.",
-  },
-  {
-    packType: "full_mock" as const,
-    price: 2000,
-    label: "Gold / Full Mock",
-    difficulty: "multi-step reasoning",
-    instruction:
-      "MULTI-STEP REASONING. Student must combine two ideas, reason from a scenario, or perform a multi-step calculation. Distractors are near-misses from wrong intermediate steps.",
-  },
-];
+/**
+ * We keep a single pack type in the DB ("full_mock") as a container for all
+ * questions. The PWA doesn't distinguish pack tiers — every paying user gets
+ * access to all questions for a subject.
+ */
+const PACK_TYPE = "full_mock" as const;
+const PACK_PRICE = 0; // price is on userPurchases, not on the pack itself
 
-const MAX_Q_CHARS = 90;
-const MAX_OPT_CHARS = 28;
+const QUESTIONS_PER_BATCH = 20;
+const BATCHES_PER_PDF = 2; // 2 × 20 = 40 questions per subject per year
 
 // ─── PDF Extraction ───────────────────────────────────────────────────────────
 
@@ -65,19 +61,14 @@ function normalizeSubjectName(raw: string): string {
     .replace(/\s+/g, " ")
     .replace(/Social and Religious Studies/i, "Social & Religious Studies")
     .replace(/Social\s+Religious Studies/i, "Social & Religious Studies")
-    .replace(/Social Religious Studies/i, "Social & Religious Studies")
     .replace(
       /Science and Elementary Technology/i,
-      "Science & Elementary Technology",
-    )
-    .replace(
-      /Science & Elementary Technology/i,
       "Science & Elementary Technology",
     )
     .trim();
 }
 
-// ─── Gemini Extraction ────────────────────────────────────────────────────────
+// ─── Gemini Question Generation ───────────────────────────────────────────────
 
 interface ExtractedQuestion {
   questionText: string;
@@ -86,232 +77,212 @@ interface ExtractedQuestion {
   explanation: string;
 }
 
+function subjectFocus(subjectName: string): string {
+  if (subjectName === "Mathematics") {
+    return "Cover: integers, fractions, decimals, percentages, geometry, statistics, ratio, time, measurement, algebra, LCM/GCF. Include word problems.";
+  }
+  if (subjectName === "English Language") {
+    return "Cover: vocabulary, grammar (pronouns, verb tenses, conjunctions, prepositions, question tags, articles), reading comprehension, punctuation. Convert fill-in-the-blank to MCQ format.";
+  }
+  if (subjectName.includes("Science")) {
+    return "Cover: living things, plants, animals, human body systems, sound, light, electricity, materials, states of matter, farming, environment, health.";
+  }
+  return "Cover: Rwanda geography, history, civic education, health education, cooperative societies, leadership, environmental studies, religious studies.";
+}
+
 async function extractQuestionsWithGemini(
   rawText: string,
   subjectName: string,
   year: number,
-  packConfig: (typeof PACK_CONFIGS)[number],
+  batch: number,
 ): Promise<ExtractedQuestion[]> {
-  // Two batches of 20 = ~40 questions per pack
-  // Splitting into batches improves answer distribution and avoids context limits
-  const allQuestions: ExtractedQuestion[] = [];
-
-  for (const batch of [1, 2]) {
-    const prompt = `You are generating quiz questions for a USSD mobile app for Rwandan P6 students on basic feature phones. USSD screens are tiny. Every constraint below is ABSOLUTE — violations break the app.
+  const prompt = `You are generating multiple-choice practice questions for Xeta, a Rwandan P6 national exam preparation app. These questions will appear on a mobile screen with full readable text—no character limits apply.
 
 ## TASK
-Generate exactly 20 multiple-choice questions.
+Generate exactly ${QUESTIONS_PER_BATCH} multiple-choice questions.
 Subject: ${subjectName}
 Year: ${year}
-Pack: ${packConfig.label}
-Difficulty: ${packConfig.difficulty}
-Batch: ${batch} of 2 — generate DIFFERENT questions from batch 1, no repeats.
+Batch: ${batch} of ${BATCHES_PER_PDF} — generate DIFFERENT questions from any previous batch, no repeats.
 
-## DIFFICULTY INSTRUCTION
-${packConfig.instruction}
+## COPYRIGHT PROTECTION & ORIGINALITY (CRITICAL RULE)
+The "EXAM CONTENT" provided below is for TOPIC REFERENCE ONLY. You must never copy NESA's expression. 
+- NEVER copy question text or distractors verbatim.
+- If the PDF uses a specific scenario (e.g., "A car travels at 60km/h"), change the numbers, names, and objects (e.g., "A motorbike travels at 45km/h").
+- Do not mirror sentence structures. If the PDF asks "Which is NOT a part of...?", rephrase it as "Identify the item that does not belong to..."
+- Distractors must be your own original, plausible mistakes, not the same group of wrong answers used in the PDF.
+- SELF-CHECK: If 5 or more consecutive words match the PDF, rewrite the question.
 
-## ABSOLUTE CHARACTER LIMITS — COUNT EVERY CHARACTER
-- questionText: MAX 90 characters. Count spaces too. No newlines.
-- Each option value: MAX 28 characters. Count spaces too. No newlines.
-- Keys must be exactly: "A", "B", "C", "D"
-- correctOption must be exactly one of: "A", "B", "C", "D"
+## QUESTION QUALITY
+- Mix difficulty: 40% straightforward recall, 40% application, 20% multi-step reasoning.
+- Every question must be SELF-CONTAINED — no "according to the passage" questions.
+- For Mathematics: Solve the problem yourself first to verify the answer before writing the options.
+- For English: Convert fill-in-the-blank sections into proper MCQ format. Skip composition/essay sections.
+- ONE correct answer only. No "all of the above" or "none of the above" as options.
+- Distractors must be plausible based on common student errors.
 
-## ANSWER KEY BALANCE — YOU MUST FOLLOW THIS EXACTLY
-Distribute correct answers across all 20 questions like this:
-- Questions 1–5: correctOption = "A"
-- Questions 6–10: correctOption = "B"
-- Questions 11–15: correctOption = "C"
-- Questions 16–20: correctOption = "D"
-Then shuffle the order of questions in your output so they are NOT grouped by answer.
-This ensures exactly 25% per option.
-
-## COPYRIGHT PROTECTION — THIS IS THE MOST IMPORTANT RULE
-The exam content below is provided ONLY to tell you what curriculum topics to cover.
-You must NEVER copy, reuse, or closely mirror anything from it. Treat it as inspiration for topics only, not as a source of questions.
-
-FORBIDDEN — do not do any of these:
-- Do not copy any question text, even partially. If the PDF says "A meeting started at 10:40 a.m.", do not use 10:40 a.m. in any question.
-- Do not copy any answer option text verbatim. If the PDF uses "Culling, Classification, Hopping, Cannibalism" as options, use completely different distractors.
-- Do not reuse specific numbers, names, times, or measurements from the PDF. If the PDF uses 292,142 + 505,735, use entirely different numbers.
-- Do not reuse named people or places from the PDF. If the PDF mentions "Annet" or "SANZE" or "Gakenke", use different names and places.
-- Do not copy jumbled words, spelling corrections, or word lists from the PDF. Create entirely new ones on the same topic.
-- Do not mirror sentence structure. If the PDF asks "Which of the following is NOT a role of water in our bodies?", do not ask "Which of the following is NOT a role of water in the body?" — that is still a copy.
-- Do not test the exact same historical fact using the same set of names as options. If the PDF asks "Who led South Africa's struggle?" with options Nkrumah/Kenyatta/Nyerere/Mandela, ask a different question about Pan-Africanism using different framing — for example ask about what Pan-Africanism means, or name a different leader in a different context.
-- Do not ask about the Berlin Conference using the same framing as the PDF. If the PDF asks about its main objective, ask instead about its consequences, its year, or which countries participated.
-- Do not use the exact same solar panels phrasing. If the PDF says "Solar panels change sunlight into...form of energy", ask instead "A house roof device captures sunlight. What type of energy does it produce for the home?"
-- Do not describe the diaphragm using "separates the chest cavity from the abdomen" — that is the PDF's exact wording. Instead ask: "Which muscle contracts and flattens when you breathe in deeply?"
-
-DISTRACTOR RULE — CRITICAL:
-When writing answer options, do NOT use the same set of distractors as the PDF even if you change the question. The combination of distractors is also protected expression. Always invent your own plausible wrong answers.
-
-ALLOWED:
-- You may cover the same curriculum topics (e.g. Berlin Conference, Pan-Africanism, the diaphragm, fractions, soil types).
-- You may use standard scientific, historical, or mathematical terminology (e.g. "photosynthesis", "Pan-Africanism", "denominator", "biceps").
-- You may name real institutions like Umurenge SACCO or Umwalimu SACCO as correct answers — these are facts, not NESA's expression.
-- You may write questions on the same concept using completely original wording, different numbers, and different scenarios.
-
-SELF-CHECK — before finalising each question, ask yourself three questions:
-1. "Does my question text contain 5 or more consecutive words from the original exam paper?" If yes, rewrite it.
-2. "Do my answer options appear as a group in the original exam paper?" If yes, change at least 2 of the 4 options.
-3. "Did I use the same specific numbers, names, or scenario as the original paper?" If yes, change them.
-
-## QUESTION RULES
-1. SELF-CONTAINED: No "according to the passage/text/story". Student has not read any passage.
-2. ONE CORRECT ANSWER ONLY: Only one option is unambiguously correct.
-3. NO "all of the above" or "none of the above" as options.
-4. Maths: solve the problem yourself first, verify the answer, THEN write the question and distractors.
-5. English: convert fill-in-the-blank into MCQ format. Skip composition/essay section entirely.
+## ANSWER KEY BALANCE
+Distribute correct answers evenly:
+- First 25% of batch: correctOption = "A"
+- Second 25% of batch: correctOption = "B"  
+- Third 25% of batch: correctOption = "C"
+- Final 25% of batch: correctOption = "D"
+Then SHUFFLE the final question order in your JSON output so the answers are not grouped.
 
 ## SUBJECT FOCUS
-${
-  subjectName === "Mathematics"
-    ? "Cover: integers, fractions, decimals, percentages, geometry, statistics, ratio, time, measurement, algebra. Include word problems."
-    : subjectName === "English Language"
-      ? "Cover: vocabulary, grammar (pronouns, verb tenses, conjunctions, question tags), reading comprehension concepts. Convert blanks to MCQ."
-      : subjectName.includes("Science")
-        ? "Cover: living things, plants, animals, human body systems, sound, light, electricity, materials, farming tools, technology."
-        : "Cover: Rwanda geography, history, civic education, health, cooperative societies, leadership, religious studies facts."
-}
+${subjectFocus(subjectName)}
+
+## EXPLANATION FIELD
+Write a clear 1–2 sentence explanation of WHY the correct answer is correct. 
+Make it educational and encouraging for a 12-year-old student.
 
 ## OUTPUT FORMAT
-Return ONLY raw JSON. No markdown. No backticks. No text before or after. Start your response with { and end with }.
+Return ONLY raw JSON — no markdown, no backticks, no text before or after.
+Start with { and end with }.
 
 {"questions":[{"questionText":"...","options":{"A":"...","B":"...","C":"...","D":"..."},"correctOption":"A","explanation":"..."}]}
 
-## EXAM CONTENT
+## EXAM CONTENT TO BASE TOPICS ON
 ${rawText.slice(0, 15000)}`;
 
-    let attempt = 0;
-    while (attempt < 3) {
-      attempt++;
-      try {
-        console.log(
-          `    📡 Gemini — ${packConfig.label} batch ${batch}/2 (attempt ${attempt})...`,
-        );
+  let attempt = 0;
+  while (attempt < 3) {
+    attempt++;
+    try {
+      console.log(
+        `    📡 Gemini — batch ${batch}/${BATCHES_PER_PDF} (attempt ${attempt})...`,
+      );
 
-        const response = await genAI.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: prompt,
+      const response = await genAI.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
+
+      const text = response.text;
+      if (!text) throw new Error("Empty response from Gemini");
+
+      const cleaned = text
+        .replace(/```json\s*/g, "")
+        .replace(/```\s*/g, "")
+        .trim();
+
+      const parsed = JSON.parse(cleaned);
+      if (!parsed.questions || !Array.isArray(parsed.questions)) {
+        throw new Error("Response missing questions array");
+      }
+
+      const valid: ExtractedQuestion[] = [];
+      for (const q of parsed.questions) {
+        if (
+          !q.questionText ||
+          !q.options?.A ||
+          !q.options?.B ||
+          !q.options?.C ||
+          !q.options?.D ||
+          !["A", "B", "C", "D"].includes(q.correctOption)
+        ) {
+          console.warn(
+            `    ⚠️  Skipping malformed: ${String(q.questionText).slice(0, 50)}`,
+          );
+          continue;
+        }
+
+        valid.push({
+          questionText: String(q.questionText).replace(/\n/g, " ").trim(),
+          options: {
+            A: String(q.options.A).replace(/\n/g, " ").trim(),
+            B: String(q.options.B).replace(/\n/g, " ").trim(),
+            C: String(q.options.C).replace(/\n/g, " ").trim(),
+            D: String(q.options.D).replace(/\n/g, " ").trim(),
+          },
+          correctOption: q.correctOption,
+          explanation: String(q.explanation || "")
+            .trim()
+            .slice(0, 500),
         });
+      }
 
-        const text = response.text;
-        if (!text) throw new Error("Empty response from Gemini");
-
-        const cleaned = text
-          .replace(/```json\s*/g, "")
-          .replace(/```\s*/g, "")
-          .trim();
-
-        const parsed = JSON.parse(cleaned);
-        if (!parsed.questions || !Array.isArray(parsed.questions)) {
-          throw new Error("Response missing questions array");
-        }
-
-        let batchCount = 0;
-        for (const q of parsed.questions) {
-          if (
-            !q.questionText ||
-            !q.options?.A ||
-            !q.options?.B ||
-            !q.options?.C ||
-            !q.options?.D ||
-            !["A", "B", "C", "D"].includes(q.correctOption)
-          ) {
-            console.warn(
-              `    ⚠️  Skipping malformed: ${String(q.questionText).slice(0, 40)}`,
-            );
-            continue;
-          }
-
-          allQuestions.push({
-            questionText: String(q.questionText)
-              .replace(/\n/g, " ")
-              .slice(0, MAX_Q_CHARS),
-            options: {
-              A: String(q.options.A)
-                .replace(/\n/g, " ")
-                .slice(0, MAX_OPT_CHARS),
-              B: String(q.options.B)
-                .replace(/\n/g, " ")
-                .slice(0, MAX_OPT_CHARS),
-              C: String(q.options.C)
-                .replace(/\n/g, " ")
-                .slice(0, MAX_OPT_CHARS),
-              D: String(q.options.D)
-                .replace(/\n/g, " ")
-                .slice(0, MAX_OPT_CHARS),
-            },
-            correctOption: q.correctOption,
-            explanation: String(q.explanation || "").slice(0, 300),
-          });
-          batchCount++;
-        }
-
-        console.log(`    ✅ Batch ${batch}: ${batchCount} valid questions`);
-        break;
-      } catch (err: any) {
-        console.error(`    ❌ Attempt ${attempt} failed: ${err.message}`);
-        if (attempt < 3) {
-          await new Promise((r) => setTimeout(r, 4000));
-        } else {
-          throw err;
+      // Log answer distribution
+      const dist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0 };
+      for (const q of valid) dist[q.correctOption]++;
+      const total = valid.length;
+      if (total > 0) {
+        console.log(
+          `    📊 Batch ${batch}: ${total} questions — A:${dist.A} B:${dist.B} C:${dist.C} D:${dist.D}`,
+        );
+        if (Math.max(...Object.values(dist)) / total > 0.4) {
+          console.warn(`    ⚠️  One option > 40% — distribution skewed`);
         }
       }
+
+      return valid;
+    } catch (err: any) {
+      console.error(`    ❌ Attempt ${attempt} failed: ${err.message}`);
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 4000));
+      } else {
+        throw err;
+      }
     }
-
-    if (batch === 1) await new Promise((r) => setTimeout(r, 3000));
   }
 
-  // Log final distribution
-  const dist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0 };
-  for (const q of allQuestions) dist[q.correctOption]++;
-  const total = allQuestions.length;
-  console.log(
-    `    📊 Distribution — A:${dist.A}(${((dist.A / total) * 100).toFixed(0)}%) B:${dist.B}(${((dist.B / total) * 100).toFixed(0)}%) C:${dist.C}(${((dist.C / total) * 100).toFixed(0)}%) D:${dist.D}(${((dist.D / total) * 100).toFixed(0)}%)`,
-  );
-  if (Math.max(...Object.values(dist)) / total > 0.4) {
-    console.warn(`    ⚠️  Distribution still skewed > 40% on one option.`);
-  }
-
-  return allQuestions;
+  return [];
 }
 
 // ─── Database Seeding ─────────────────────────────────────────────────────────
 
-async function seedPack(
-  extractedQuestions: ExtractedQuestion[],
-  subjectId: string,
-  packConfig: (typeof PACK_CONFIGS)[number],
-  year: number,
-): Promise<void> {
-  const packResult = await db
+async function getOrCreateSubject(subjectName: string): Promise<string> {
+  const existing = await db
+    .select()
+    .from(subjects)
+    .where(eq(subjects.name, subjectName))
+    .limit(1);
+
+  if (existing[0]) {
+    console.log(`  🗂️  Subject exists: "${subjectName}"`);
+    return existing[0].id;
+  }
+
+  const [created] = await db
+    .insert(subjects)
+    .values({ name: subjectName })
+    .returning();
+  console.log(`  🗂️  Created subject: "${subjectName}"`);
+  return created.id;
+}
+
+async function getOrCreatePack(subjectId: string): Promise<string> {
+  const existing = await db
     .select()
     .from(examPacks)
     .where(
       and(
         eq(examPacks.subjectId, subjectId),
-        eq(examPacks.packType, packConfig.packType),
+        eq(examPacks.packType, PACK_TYPE),
       ),
     )
     .limit(1);
 
-  let packId = packResult[0]?.id;
-  if (!packId) {
-    const [newPack] = await db
-      .insert(examPacks)
-      .values({
-        subjectId,
-        packType: packConfig.packType,
-        price: packConfig.price,
-      })
-      .returning();
-    packId = newPack.id;
-    console.log(
-      `    📦 Created pack: ${packConfig.label} (${packConfig.price} RWF)`,
-    );
+  if (existing[0]) {
+    return existing[0].id;
   }
 
-  const toInsert = extractedQuestions.map((q) => ({
+  const [created] = await db
+    .insert(examPacks)
+    .values({ subjectId, packType: PACK_TYPE, price: PACK_PRICE })
+    .returning();
+  console.log(`  📦 Created pack: ${PACK_TYPE}`);
+  return created.id;
+}
+
+async function insertQuestions(
+  extracted: ExtractedQuestion[],
+  subjectId: string,
+  packId: string,
+  year: number,
+): Promise<void> {
+  if (extracted.length === 0) return;
+
+  const rows = extracted.map((q) => ({
     subjectId,
     packId,
     questionText: q.questionText,
@@ -321,12 +292,8 @@ async function seedPack(
     year,
   }));
 
-  if (toInsert.length > 0) {
-    await db.insert(questions).values(toInsert);
-    console.log(
-      `    💾 Inserted ${toInsert.length} questions → ${packConfig.label}`,
-    );
-  }
+  await db.insert(questions).values(rows);
+  console.log(`  💾 Inserted ${rows.length} questions (year ${year})`);
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -336,88 +303,108 @@ async function main() {
 
   if (!fs.existsSync(inputFolder)) {
     console.error(`❌ Data folder not found: ${inputFolder}`);
+    console.error(`   Create it and place PDF files inside named:`);
+    console.error(`   YYYY_P6_SubjectName.pdf`);
+    console.error(`   e.g. 2023_P6_Mathematics.pdf`);
     process.exit(1);
   }
 
-  const files = fs.readdirSync(inputFolder).filter((f) => f.endsWith(".pdf"));
+  const files = fs
+    .readdirSync(inputFolder)
+    .filter((f) => f.endsWith(".pdf"))
+    .sort(); // process in year order
 
   if (files.length === 0) {
     console.error("❌ No PDF files found in /data folder");
     process.exit(1);
   }
 
-  console.log(`\n📚 Found ${files.length} PDF(s): ${files.join(", ")}\n`);
+  console.log(`\n📚 Found ${files.length} PDF(s):\n`);
+  files.forEach((f) => console.log(`   • ${f}`));
+  console.log();
+
+  let totalInserted = 0;
 
   for (const file of files) {
-    const filenameMatch = file.match(/^(\d{4})_P6_(.+)\.pdf$/);
-    if (!filenameMatch) {
-      console.warn(`⏭️  Skipping unrecognised filename: ${file}`);
+    const match = file.match(/^(\d{4})_P6_(.+)\.pdf$/);
+    if (!match) {
+      console.warn(
+        `⏭️  Skipping — filename doesn't match YYYY_P6_Name.pdf: ${file}`,
+      );
       continue;
     }
 
-    const year = parseInt(filenameMatch[1]);
-    const subjectName = normalizeSubjectName(filenameMatch[2]);
+    const year = parseInt(match[1]);
+    const subjectName = normalizeSubjectName(match[2]);
 
     console.log(`\n${"═".repeat(60)}`);
     console.log(`📄 ${subjectName} (${year})`);
     console.log(`${"═".repeat(60)}`);
 
+    // Extract PDF text
     let rawText: string;
     try {
       rawText = await extractTextFromPDF(path.join(inputFolder, file));
-      console.log(`  📝 PDF text: ${rawText.length} chars`);
+      console.log(`  📝 Extracted ${rawText.length} characters from PDF`);
     } catch (err: any) {
       console.error(`  ❌ PDF extraction failed: ${err.message}`);
       continue;
     }
 
-    // Get or create subject
-    let subjectResult = await db
-      .select()
-      .from(subjects)
-      .where(eq(subjects.name, subjectName))
-      .limit(1);
+    // Get or create subject + pack
+    const subjectId = await getOrCreateSubject(subjectName);
+    const packId = await getOrCreatePack(subjectId);
 
-    let subjectId = subjectResult[0]?.id;
-    if (!subjectId) {
-      const [newSub] = await db
-        .insert(subjects)
-        .values({ name: subjectName })
-        .returning();
-      subjectId = newSub.id;
-      console.log(`  🗂️  Created subject: "${subjectName}"`);
-    } else {
-      console.log(`  🗂️  Using subject: "${subjectName}"`);
-    }
+    // Generate questions in batches
+    const allExtracted: ExtractedQuestion[] = [];
 
-    // Process all 3 packs
-    for (const packConfig of PACK_CONFIGS) {
-      console.log(`\n  🎯 ${packConfig.label}...`);
+    for (let batch = 1; batch <= BATCHES_PER_PDF; batch++) {
       try {
         const extracted = await extractQuestionsWithGemini(
           rawText,
           subjectName,
           year,
-          packConfig,
+          batch,
         );
+        allExtracted.push(...extracted);
 
-        if (extracted.length === 0) {
-          console.warn(`  ⚠️  No valid questions extracted — skipping`);
-          continue;
+        // Pause between batches to be kind to the API
+        if (batch < BATCHES_PER_PDF) {
+          await new Promise((r) => setTimeout(r, 3000));
         }
-
-        await seedPack(extracted, subjectId, packConfig, year);
-        await new Promise((r) => setTimeout(r, 3000));
       } catch (err: any) {
-        console.error(`  ❌ ${packConfig.label} failed: ${err.message}`);
+        console.error(`  ❌ Batch ${batch} failed: ${err.message}`);
       }
     }
+
+    if (allExtracted.length === 0) {
+      console.warn(
+        `  ⚠️  No questions extracted from ${file} — skipping DB insert`,
+      );
+      continue;
+    }
+
+    // Log overall distribution for this file
+    const dist: Record<string, number> = { A: 0, B: 0, C: 0, D: 0 };
+    for (const q of allExtracted) dist[q.correctOption]++;
+    console.log(
+      `\n  📊 Total: ${allExtracted.length} questions — A:${dist.A} B:${dist.B} C:${dist.C} D:${dist.D}`,
+    );
+
+    await insertQuestions(allExtracted, subjectId, packId, year);
+    totalInserted += allExtracted.length;
+
+    // Pause between files
+    await new Promise((r) => setTimeout(r, 3000));
   }
 
   console.log(`\n${"═".repeat(60)}`);
-  console.log(`✅ Ingestion complete`);
+  console.log(`✅ Ingestion complete — ${totalInserted} questions inserted`);
   console.log(`${"═".repeat(60)}\n`);
   process.exit(0);
 }
 
-main();
+main().catch((err) => {
+  console.error("Fatal error:", err);
+  process.exit(1);
+});

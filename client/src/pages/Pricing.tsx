@@ -68,7 +68,7 @@ export default function Pricing() {
     {
       key: "week_pass",
       label: t("pricing.plans.week.label"),
-      price: 5000,
+      price: 3999,
       period: t("pricing.plans.week.period"),
       badge: t("pricing.plans.week.badge"),
       badgeColor: "#f59e0b",

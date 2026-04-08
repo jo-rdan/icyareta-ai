@@ -8,7 +8,7 @@ export type AccessType = "free_trial" | "day_pass" | "week_pass";
 export const ACCESS_PRICES: Record<AccessType, number> = {
   free_trial: 0,
   day_pass: 800,
-  week_pass: 5000,
+  week_pass: 3999, // updated from 5000
 };
 
 const ACCESS_DURATIONS_MS: Record<AccessType, number> = {
