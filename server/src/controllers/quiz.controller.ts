@@ -114,6 +114,7 @@ export const startQuiz = async (
       id: firstQuestion!.id,
       text: firstQuestion!.questionText,
       options: firstQuestion!.options,
+      correctOption: firstQuestion!.correctOption,
     },
   });
 };
@@ -248,6 +249,7 @@ export const submitAnswer = async (
       id: nextQuestion!.id,
       text: nextQuestion!.questionText,
       options: nextQuestion!.options,
+      correctOption: nextQuestion!.correctOption,
       index: nextIndex,
       total: assignedIds.length,
     },

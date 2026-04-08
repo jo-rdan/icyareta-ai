@@ -19,6 +19,9 @@ import { LuCheck, LuStar, LuZap } from "react-icons/lu";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/useAuth";
 import api from "@/lib/axios";
+import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
+import { useTranslation } from "react-i18next";
+import { capitalize } from "@/lib/capitalize";
 
 type PlanKey = "day_pass" | "week_pass" | "month_pass";
 
@@ -35,57 +38,8 @@ interface Plan {
   popular: boolean;
 }
 
-const PLANS: Plan[] = [
-  {
-    key: "day_pass",
-    label: "Day Pass",
-    price: 800,
-    period: "day",
-    badge: null,
-    badgeColor: "",
-    headline: "Try it today",
-    subline: "Perfect for a focused practice session before an exam.",
-    icon: <LuZap size={16} />,
-    popular: false,
-  },
-  {
-    key: "week_pass",
-    label: "Week Pass",
-    price: 5000,
-    period: "week",
-    badge: "Most popular",
-    badgeColor: "#f59e0b",
-    headline: "Best for exam prep",
-    subline: "7 days of daily practice — the sweet spot for real improvement.",
-    icon: <LuStar size={16} />,
-    popular: true,
-  },
-  {
-    key: "month_pass",
-    label: "Month Pass",
-    price: 9000,
-    period: "month",
-    badge: "Save 63%",
-    badgeColor: "#1a6b3c",
-    headline: "Full season coverage",
-    subline:
-      "30 days at just 300 RWF/day. The smartest investment before July.",
-    icon: <LuStar size={16} />,
-    popular: false,
-  },
-];
-
-const FEATURES = [
-  "All 4 P6 subjects — Maths, English, Science, Social Studies",
-  "3 difficulty levels: Bronze, Silver & Gold",
-  "480+ real P6 curriculum questions",
-  "Step-by-step explanations for every answer",
-  "Instant score with wrong-answer review",
-  "Progress tracking so you know what to fix",
-  "Works offline — no data needed mid-session",
-];
-
 export default function Pricing() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
   const [selected, setSelected] = useState<PlanKey>("week_pass");
@@ -97,6 +51,46 @@ export default function Pricing() {
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState("");
+
+  const PLANS: Plan[] = [
+    {
+      key: "day_pass",
+      label: t("pricing.plans.day.label"),
+      price: 800,
+      period: t("pricing.plans.day.period"),
+      badge: null,
+      badgeColor: "",
+      headline: t("pricing.plans.day.headline"),
+      subline: t("pricing.plans.day.subline"),
+      icon: <LuZap size={16} />,
+      popular: false,
+    },
+    {
+      key: "week_pass",
+      label: t("pricing.plans.week.label"),
+      price: 5000,
+      period: t("pricing.plans.week.period"),
+      badge: t("pricing.plans.week.badge"),
+      badgeColor: "#f59e0b",
+      headline: t("pricing.plans.week.headline"),
+      subline: t("pricing.plans.week.subline"),
+      icon: <LuStar size={16} />,
+      popular: true,
+    },
+    // {
+    //   key: "month_pass",
+    //   label: "Month Pass",
+    //   price: 9000,
+    //   period: "month",
+    //   badge: "Save 63%",
+    //   badgeColor: "#1a6b3c",
+    //   headline: "Full season coverage",
+    //   subline:
+    //     "30 days at just 300 RWF/day. The smartest investment before July.",
+    //   icon: <LuStar size={16} />,
+    //   popular: false,
+    // },
+  ];
 
   const activePlan = PLANS.find((p) => p.key === selected)!;
 
@@ -154,7 +148,7 @@ export default function Pricing() {
           setShowModal(false);
           setIsLoading(false);
           updateUser({ accessStatus: "active" });
-          navigate("/subjects");
+          navigate("/app/subjects");
           return;
         }
 
@@ -182,6 +176,16 @@ export default function Pricing() {
     return check();
   };
 
+  const FEATURES = [
+    t("pricing.features.f1"),
+    t("pricing.features.f2"),
+    t("pricing.features.f3"),
+    t("pricing.features.f4"),
+    t("pricing.features.f5"),
+    t("pricing.features.f6"),
+    t("pricing.features.f7"),
+  ];
+
   return (
     <Box minH="100vh" bg="paper">
       {/* Header */}
@@ -192,22 +196,28 @@ export default function Pricing() {
         px="6"
         py="4"
       >
-        <Container maxW="container.sm">
+        <Flex
+          maxW="container.sm"
+          justifyContent={"space-between"}
+          alignItems={"baseline"}
+        >
           <Flex align="center" gap="3">
             <IconButton
               aria-label="Back"
               variant="ghost"
               size="sm"
               borderRadius="10px"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/app/subjects")}
+              color={"bg.panel"}
             >
               <Text fontSize="18px">←</Text>
             </IconButton>
             <Text fontFamily="heading" fontWeight="800" fontSize="16px">
-              Choose your plan
+              {t("pricing.choosePlan")}
             </Text>
           </Flex>
-        </Container>
+          <LanguageSelection />
+        </Flex>
       </Box>
 
       <Container maxW="container.sm" px="6" py="8">
@@ -220,11 +230,10 @@ export default function Pricing() {
               fontWeight="800"
               letterSpacing="-1px"
             >
-              Invest in your child's exam success
+              {t("pricing.investInChild")}
             </Heading>
             <Text color="gray.500" fontSize="14px" lineHeight="1.6">
-              A private tutor costs 15,000–30,000 RWF per session. Icyareta
-              gives unlimited P6 practice for less than a cup of juice a day.
+              {t("pricing.whyPay")}
             </Text>
           </VStack>
 
@@ -294,7 +303,7 @@ export default function Pricing() {
                         {plan.price.toLocaleString()} RWF
                       </Text>
                       <Text fontSize="11px" color="gray.400">
-                        per {plan.period}
+                        {t("common.per")} {plan.period}
                       </Text>
                     </VStack>
                   </Flex>
@@ -309,17 +318,17 @@ export default function Pricing() {
                       py="1.5"
                     >
                       <Text fontSize="11px" color="amber.700" fontWeight="600">
-                        💰 Just 714 RWF/day — cheaper than the Day Pass
+                        💰 {t("pricing.cheaperDayPass")}
                       </Text>
                     </Box>
                   )}
-                  {plan.key === "month_pass" && (
+                  {/* {plan.key === "month_pass" && (
                     <Box mt="3" bg="#e8f5ee" borderRadius="8px" px="3" py="1.5">
                       <Text fontSize="11px" color="#1a6b3c" fontWeight="600">
                         🏆 Only 300 RWF/day — your best value before July exams
                       </Text>
                     </Box>
-                  )}
+                  )} */}
                 </Box>
               );
             })}
@@ -342,7 +351,7 @@ export default function Pricing() {
               color="gray.400"
               mb="4"
             >
-              Every plan includes
+              {t("pricing.plansInclude")}
             </Text>
             <List.Root as="ul" gap="3" listStyle="none">
               {FEATURES.map((f) => (
@@ -379,7 +388,7 @@ export default function Pricing() {
           </Box>
 
           {/* Parent trust signal */}
-          <Box
+          {/* <Box
             bg="white"
             border="1px solid"
             borderColor="gray.100"
@@ -392,13 +401,12 @@ export default function Pricing() {
               lineHeight="1.7"
               fontStyle="italic"
             >
-              "I could see my daughter's confidence grow after just one week of
-              practice. She passed her mock with 78%."
+              {t("pricing.testimony")}
             </Text>
             <Text fontSize="12px" color="gray.400" fontWeight="600" mt="2">
-              — Parent of P6 student, Kigali
+              — {t("pricing.witness")}
             </Text>
-          </Box>
+          </Box> */}
 
           {/* MoMo number input */}
           <Box
@@ -417,7 +425,7 @@ export default function Pricing() {
               color="gray.400"
               mb="3"
             >
-              Your MTN MoMo number
+              {t("pricing.yourMomoNumber")}
             </Text>
             <Flex gap="3" align="center">
               <Box
@@ -457,7 +465,7 @@ export default function Pricing() {
               />
             </Flex>
             <Text fontSize="12px" color="gray.400" mt="2">
-              You'll receive a MoMo prompt on this number.
+              {t("pricing.momoPrompt")}
             </Text>
           </Box>
 
@@ -488,12 +496,12 @@ export default function Pricing() {
             loading={isLoading}
             onClick={handlePay}
           >
-            Get {activePlan.label} — {activePlan.price.toLocaleString()} RWF
+            {capitalize(t("common.get"))} {activePlan.label} —{" "}
+            {activePlan.price.toLocaleString()} RWF
           </Button>
 
           <Text textAlign="center" fontSize="12px" color="gray.400">
-            Secure payment via MTN Mobile Money · Activates instantly · No
-            subscription
+            {t("pricing.securePayment")}
           </Text>
         </VStack>
       </Container>
@@ -524,17 +532,17 @@ export default function Pricing() {
                     fontWeight="800"
                     letterSpacing="-0.5px"
                   >
-                    Approve on your phone
+                    {t("pricing.approvePrompt")}
                   </Heading>
                   <Text fontSize="14px" color="gray.500" lineHeight="1.6">
-                    A MoMo payment of{" "}
-                    <strong>{activePlan.price.toLocaleString()} RWF</strong> has
-                    been sent to your phone. Approve it to activate your{" "}
-                    {activePlan.label} instantly.
+                    {t("pricing.momoPaymentOf")}{" "}
+                    <strong>{activePlan.price.toLocaleString()} RWF</strong>{" "}
+                    {t("pricing.hasBeenSent")} {activePlan.label}{" "}
+                    {t("common.instantly")}.
                   </Text>
                   <Box bg="#e8f5ee" borderRadius="12px" px="4" py="3" w="full">
                     <Text fontSize="12px" color="#1a6b3c" fontWeight="600">
-                      📱 Waiting for MoMo confirmation...
+                      📱 {t("pricing.waitingConfirmation")}...
                     </Text>
                   </Box>
                 </VStack>

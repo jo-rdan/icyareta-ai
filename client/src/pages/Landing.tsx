@@ -1,3 +1,4 @@
+import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
 import { useAuth } from "@/context/useAuth";
 import {
   Box,
@@ -12,6 +13,7 @@ import {
   Center,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
 const fadeUp = keyframes`
@@ -26,28 +28,29 @@ const SUBJECTS = [
   { icon: "🌍", name: "Social Studies" },
 ];
 
-const HOW = [
-  {
-    step: "01",
-    title: "Try for free",
-    desc: "Answer 3 real P6 questions on any subject. No payment needed.",
-  },
-  {
-    step: "02",
-    title: "See your results",
-    desc: "Get your score instantly. See exactly where your child needs to improve.",
-  },
-  {
-    step: "03",
-    title: "Subscribe & practice",
-    desc: "Unlock all subjects and difficulty levels for a full day access at 800 RWF.",
-  },
-];
-
 export default function Landing() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const handleTrial = () => navigate(user ? "/subjects" : "/auth");
+  const handleTrial = () => navigate(user ? "/app/subjects" : "/auth");
+
+  const HOW = [
+    {
+      step: "01",
+      title: t("landingPage.hows.free"),
+      desc: t("landingPage.hows.freeDesc"),
+    },
+    {
+      step: "02",
+      title: t("landingPage.hows.seeResults"),
+      desc: t("landingPage.hows.seeResultsDesc"),
+    },
+    {
+      step: "03",
+      title: t("landingPage.hows.subscribe"),
+      desc: t("landingPage.hows.subscribeDesc"),
+    },
+  ];
 
   return (
     <Box minH="100vh" bg="paper">
@@ -84,7 +87,7 @@ export default function Landing() {
 
         <Container maxW="container.md" position="relative">
           {/* Logo */}
-          <Flex align="center" mb="10">
+          <Flex align="center" mb="10" columnGap={"70%"}>
             <Box
               bg="rgba(255,255,255,0.15)"
               px="4"
@@ -102,6 +105,7 @@ export default function Landing() {
                 Xeta
               </Text>
             </Box>
+            <LanguageSelection />
           </Flex>
 
           <VStack
@@ -120,7 +124,7 @@ export default function Landing() {
               fontWeight="600"
               letterSpacing="0.8px"
             >
-              P6 EXAM PREP • RWANDA 2026
+              {t("landingPage.prepExamText")}
             </Badge>
 
             <Heading
@@ -131,10 +135,10 @@ export default function Landing() {
               lineHeight="1.05"
               letterSpacing="-2px"
             >
-              Prep smarter.
+              {t("landingPage.prepSmarterText")}
               <br />
               <Box as="span" color="#7ee8a2">
-                Score higher.
+                {t("landingPage.scoreHigherText")}
               </Box>
             </Heading>
 
@@ -144,15 +148,14 @@ export default function Landing() {
               lineHeight="1.7"
               maxW="480px"
             >
-              Rwanda's first mobile exam prep platform. Real P6 curriculum
-              questions. Instant results. Works offline.
+              {t("landingPage.subHeroText")}
             </Text>
 
             <SimpleGrid columns={3} gap="3" w="full" maxW="400px" pt="2">
               {[
-                { num: "480+", label: "Questions" },
-                { num: "4", label: "Subjects" },
-                { num: "P6", label: "Aligned" },
+                { num: "480+", label: t("common.questions") },
+                { num: "4", label: t("common.subjects") },
+                { num: "P6", label: t("common.aligned") },
               ].map((s) => (
                 <Box
                   key={s.label}
@@ -198,7 +201,7 @@ export default function Landing() {
                 transition="all 0.2s"
                 onClick={handleTrial}
               >
-                Try Free — 5 Questions
+                {t("landingPage.tryFree")}
               </Button>
               <Button
                 w="full"
@@ -212,7 +215,7 @@ export default function Landing() {
                 _hover={{ bg: "rgba(255,255,255,0.18)" }}
                 onClick={() => navigate("/pricing")}
               >
-                Full Day Access — 800 RWF
+                {t("common.fullAccess")}
               </Button>
             </VStack>
           </VStack>
@@ -230,7 +233,7 @@ export default function Landing() {
           color="gray.400"
           mb="5"
         >
-          Subjects covered
+          {t("landingPage.subjectsCovered")}
         </Text>
         <SimpleGrid columns={{ base: 2, md: 4 }} gap="4">
           {SUBJECTS.map((s) => (
@@ -272,7 +275,7 @@ export default function Landing() {
             color="gray.400"
             mb="5"
           >
-            How it works
+            {t("landingPage.howItWorks")}
           </Text>
         </Flex>
         <VStack gap="4" align="stretch">
@@ -284,16 +287,6 @@ export default function Landing() {
               p="5"
               gap="4"
             >
-              <Box h="48px" bg="brand.600" borderRadius="14px">
-                <Text
-                  fontFamily="heading"
-                  fontWeight="800"
-                  fontSize="16px"
-                  color="white"
-                >
-                  {item.step}
-                </Text>
-              </Box>
               <Box>
                 <Text
                   fontFamily="heading"
@@ -322,10 +315,10 @@ export default function Landing() {
           letterSpacing="-1px"
           mb="3"
         >
-          Ready to start practicing?
+          {t("landingPage.readyToStart")}
         </Heading>
         <Text color="gray.500" mb="6" fontSize="15px">
-          Join parents across Kigali preparing their P6 children.
+          {t("landingPage.joinParentsText")}
         </Text>
         <Button
           size="lg"
@@ -335,7 +328,7 @@ export default function Landing() {
           colorPalette="brand"
           onClick={handleTrial}
         >
-          Start Free Trial
+          {t("landingPage.startFreeTrial")}
         </Button>
       </Container>
     </Box>

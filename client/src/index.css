@@ -52,14 +52,32 @@
 
 #root {
   /* width: 1126px; */
-  max-width: 100%;
-  /* margin: 0 auto; */
+  max-width: 768px; /* Changed to tablet width */
+  margin: 0 auto; /* Added centering */
   text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+  position: relative; /* Added for fixed element alignment */
   /* box-sizing: border-box; */
+}
+
+/* Added: Keeps fixed elements centered within the 768px limit */
+#root [style*="position: fixed"] {
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 100% !important;
+  max-width: 768px !important;
+}
+
+/* Added: Centers Chakra/Portal overlays to match tablet view */
+.chakra-portal,
+.chakra-portal > * {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 768px;
+  margin: 0 auto;
 }
 
 body {

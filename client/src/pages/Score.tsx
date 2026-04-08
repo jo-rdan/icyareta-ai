@@ -10,8 +10,11 @@ import {
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/useAuth";
 import { useQuiz } from "@/context/useQuiz";
+import { useTranslation } from "react-i18next";
+import { capitalize } from "@/lib/capitalize";
+import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
+import { useRef, useState } from "react";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(16px); }
@@ -19,9 +22,10 @@ const fadeUp = keyframes`
 `;
 
 export default function Score() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const isRedirecting = useRef(false);
   const { session, resetQuiz } = useQuiz();
-  const { user } = useAuth();
 
   // Snapshot everything we need before any reset can null the session.
   // This is the fix for the bug where clicking "Get Day Pass" would call
@@ -33,18 +37,38 @@ export default function Score() {
   const answers = session?.answers ?? [];
 
   if (!score) {
-    navigate("/subjects");
+    const checkAndNavigate = () => {
+      if (!isRedirecting.current) {
+        navigate("/app/subjects");
+      }
+    };
+
+    // We execute the check. Since this block returns null (unmounts),
+    // the "render" of UI is finished, and we are just handling the exit.
+    // eslint-disable-next-line react-hooks/refs
+    checkAndNavigate();
     return null;
   }
+
+  const handleNavigation = (path: string) => {
+    // We update the ref IMMEDIATELY before the Service call
+    isRedirecting.current = true;
+
+    // Service: Clear the Model
+    resetQuiz();
+
+    // Controller: Move to new Route
+    navigate(path);
+  };
 
   const pct = score.percentage;
   const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "🎯" : "💪";
   const message =
     pct >= 80
-      ? "Excellent work!"
+      ? t("score.excellentWork")
       : pct >= 60
-        ? "Good effort!"
-        : "Keep practicing!";
+        ? t("score.goodEffort")
+        : t("score.keepPractice");
   const headerBg =
     pct >= 60
       ? "linear-gradient(160deg, #072a16, #1a6b3c)"
@@ -55,25 +79,14 @@ export default function Score() {
   // Always navigate FIRST, then reset.
   // If we reset first, session becomes null, the guard fires, and the user
   // gets redirected to /subjects regardless of which button they pressed.
-  const goBack = () => {
-    navigate("/subjects");
-    resetQuiz();
-  };
-
-  const goSubscribe = () => {
-    navigate("/pricing");
-    resetQuiz();
-  };
-
-  const goDashboard = () => {
-    navigate("/dashboard");
-    resetQuiz();
-  };
 
   return (
     <Box minH="100vh" bg="paper">
       {/* Score header */}
       <Box style={{ background: headerBg }} pt="12" pb="10" px="6">
+        <Box>
+          <LanguageSelection />
+        </Box>
         <Container maxW="container.sm">
           <VStack gap="3" style={{ animation: `${fadeUp} 0.5s ease forwards` }}>
             <Text fontSize="52px">{emoji}</Text>
@@ -84,7 +97,8 @@ export default function Score() {
               textTransform="uppercase"
               color="rgba(255,255,255,0.6)"
             >
-              {subjectName} • {isTrial ? "Free Trial" : "Practice"}
+              {subjectName} •{" "}
+              {isTrial ? t("common.freeTrial") : t("common.practice")}
             </Text>
             <Heading
               fontFamily="heading"
@@ -101,7 +115,7 @@ export default function Score() {
               fontSize="15px"
               fontWeight="500"
             >
-              {message} — {pct}% correct
+              {message} — {pct}% {t("common.correct")}
             </Text>
           </VStack>
         </Container>
@@ -131,17 +145,25 @@ export default function Score() {
               color="gray.400"
               mb="4"
             >
-              Score breakdown
+              {t("score.scoreBreakdown")}
             </Text>
             <Flex justify="space-around">
               {[
-                { num: score.correct, label: "Correct", color: "#1a6b3c" },
+                {
+                  num: score.correct,
+                  label: capitalize(t("common.correct")),
+                  color: "#1a6b3c",
+                },
                 {
                   num: score.total - score.correct,
-                  label: "Wrong",
+                  label: capitalize(t("common.wrong")),
                   color: "#f87171",
                 },
-                { num: `${pct}%`, label: "Score", color: "#374151" },
+                {
+                  num: `${pct}%`,
+                  label: capitalize(t("score.score")),
+                  color: "#374151",
+                },
               ].map((item, i) => (
                 <VStack key={i} gap="0">
                   <Text
@@ -178,8 +200,8 @@ export default function Score() {
                 color="gray.400"
                 mb="3"
               >
-                {wrongAnswers.length} answer
-                {wrongAnswers.length !== 1 ? "s" : ""} to review
+                {wrongAnswers.length} {t("common.answer")}
+                {wrongAnswers.length !== 1 ? "s" : ""} {t("score.toReview")}
               </Text>
               <VStack gap="2" align="stretch">
                 {wrongAnswers.map((a, i) => (
@@ -187,7 +209,7 @@ export default function Score() {
                     <Flex gap="2" align="center" mb="1">
                       <Box bg="red.100" px="2" borderRadius="6px">
                         <Text fontSize="11px" fontWeight="700" color="red.600">
-                          You: {a.selectedOption}
+                          {t("common.you")}: {a.selectedOption}
                         </Text>
                       </Box>
                       <Box bg="green.100" px="2" borderRadius="6px">
@@ -196,7 +218,7 @@ export default function Score() {
                           fontWeight="700"
                           color="green.700"
                         >
-                          Correct: {a.correctOption}
+                          {capitalize(t("common.correct"))}: {a.correctOption}
                         </Text>
                       </Box>
                     </Flex>
@@ -243,10 +265,10 @@ export default function Score() {
               >
                 <Text fontSize="22px">🔒</Text>
                 <Text fontWeight="700" fontSize="14px" color="gray.800">
-                  Unlock full explanations
+                  {t("score.unlockExplanation")}
                 </Text>
                 <Text fontSize="12px" color="gray.500">
-                  See exactly why each answer is correct
+                  {t("score.seeWhyAnswer")}
                 </Text>
               </Box>
             </Box>
@@ -263,9 +285,9 @@ export default function Score() {
                 h="56px"
                 fontSize="15px"
                 colorPalette="brand"
-                onClick={goSubscribe}
+                onClick={() => handleNavigation("/pricing")}
               >
-                Unlock Full Access — from 800 RWF
+                {t("common.fullAccess")}
               </Button>
               <Button
                 w="full"
@@ -275,9 +297,9 @@ export default function Score() {
                 variant="outline"
                 borderColor="gray.200"
                 color="gray.600"
-                onClick={goBack}
+                onClick={() => handleNavigation("/app/subjects")}
               >
-                Back to subjects
+                {t("score.backSubjects")}
               </Button>
             </VStack>
           ) : (
@@ -288,9 +310,9 @@ export default function Score() {
                 h="56px"
                 fontSize="15px"
                 colorPalette="brand"
-                onClick={goBack}
+                onClick={() => handleNavigation("/app/subjects")}
               >
-                Practice another subject
+                {t("score.practiceSubject")}
               </Button>
               <Button
                 w="full"
@@ -299,9 +321,9 @@ export default function Score() {
                 fontSize="14px"
                 variant="ghost"
                 color="gray.500"
-                onClick={goDashboard}
+                onClick={() => handleNavigation("/app/dashboard")}
               >
-                View my progress
+                {t("score.viewProgress")}
               </Button>
             </VStack>
           )}

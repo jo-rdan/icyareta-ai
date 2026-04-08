@@ -9,7 +9,8 @@
     "dev": "ts-node-dev src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:ingest": "ts-node --project tsconfig.json src/scripts/ingest.ts"
+    "db:ingest": "ts-node --project tsconfig.json src/scripts/ingest.ts",
+    "db:seed": "ts-node --project tsconfig.json src/scripts/seed.ts"
   },
   "repository": {
     "type": "git",

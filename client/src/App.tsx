@@ -16,24 +16,46 @@ import Score from "./pages/Score";
 import Pricing from "./pages/Pricing";
 import Dashboard from "./pages/Dashboard";
 
+/**
+ * Guards /app/* routes.
+ * Unauthenticated users are redirected to /auth.
+ * Uses Outlet so this works as a layout route in React Router 7.
+ */
 function ProtectedRoute() {
   const { user } = useAuth();
+  return user ? <Outlet /> : <Navigate to="/auth" replace />;
+}
 
-  return user ? <Outlet /> : <Navigate to={"/auth"} replace />;
+/**
+ * Smart root redirect:
+ * - Logged-in users  → /app/subjects
+ * - Guests           → /landing
+ */
+function RootRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={user ? "/app/subjects" : "/landing"} replace />;
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/subjects" element={<SubjectSelect />} />
-        <Route path="/quiz" element={<Quiz />} />
-        <Route path="/score" element={<Score />} />
-      </Route>
-      <Route path="/" element={<Landing />} />
+      {/* Root → smart redirect */}
+      <Route path="/" element={<RootRedirect />} />
+
+      {/* Public pages */}
+      <Route path="/landing" element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/pricing" element={<Pricing />} />
+
+      {/* Protected app — all under /app */}
+      <Route path="/app" element={<ProtectedRoute />}>
+        <Route path="subjects" element={<SubjectSelect />} />
+        <Route path="quiz" element={<Quiz />} />
+        <Route path="score" element={<Score />} />
+        <Route path="dashboard" element={<Dashboard />} />
+      </Route>
+
+      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

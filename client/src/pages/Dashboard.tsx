@@ -10,10 +10,14 @@ import {
   Button,
   Badge,
   Spinner,
+  HStack,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import api from "../lib/axios";
+import { formatLocalizedDate } from "@/lib/formatDate";
+import { useTranslation } from "react-i18next";
+import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
 
 interface Result {
   id: string;
@@ -41,6 +45,7 @@ const getDaysUntilExam = () => {
 };
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [results, setResults] = useState<Result[]>([]);
@@ -97,7 +102,7 @@ export default function Dashboard() {
                 textTransform="uppercase"
                 color="rgba(255,255,255,0.5)"
               >
-                Welcome back
+                {t("dashboard.welcome")}
               </Text>
               <Heading
                 fontFamily="heading"
@@ -106,27 +111,30 @@ export default function Dashboard() {
                 color="white"
                 letterSpacing="-1px"
               >
-                {user?.email ?? user?.phoneNumber ?? "Student"}
+                {user?.childName ?? t("common.student")}
               </Heading>
             </VStack>
-            <Button
-              size="sm"
-              variant="ghost"
-              color="rgba(255,255,255,0.6)"
-              _hover={{ color: "white" }}
-              onClick={logout}
-            >
-              Sign out
-            </Button>
+            <HStack>
+              <Button
+                size="sm"
+                variant="ghost"
+                color="rgba(255,255,255,0.6)"
+                _hover={{ color: "white" }}
+                onClick={logout}
+              >
+                {t("dashboard.logOut")}
+              </Button>
+              <LanguageSelection />
+            </HStack>
           </Flex>
 
           <SimpleGrid columns={3} gap="3">
             {[
-              { num: `${daysUntilExam}`, label: "Days to exam" },
-              { num: `${results.length}`, label: "Sessions done" },
+              { num: `${daysUntilExam}`, label: t("dashboard.remainingDays") },
+              { num: `${results.length}`, label: t("dashboard.doneSessions") },
               {
                 num: results.length ? `${avgScore}%` : "—",
-                label: "Avg score",
+                label: t("dashboard.averageScore"),
               },
             ].map((s) => (
               <Box
@@ -172,7 +180,7 @@ export default function Dashboard() {
               color="gray.400"
               mb="4"
             >
-              Practice now
+              {t("common.practiceNow")}
             </Text>
             <Button
               w="full"
@@ -180,9 +188,9 @@ export default function Dashboard() {
               h="56px"
               fontSize="15px"
               colorPalette="brand"
-              onClick={() => navigate("/subjects")}
+              onClick={() => navigate("/app/subjects")}
             >
-              Start a new session
+              {t("dashboard.startNewSession")}
             </Button>
           </Box>
 
@@ -207,7 +215,7 @@ export default function Dashboard() {
                 color="gray.400"
                 mb="4"
               >
-                Recent sessions
+                {t("dashboard.recentSessions")}
               </Text>
               <VStack gap="3" align="stretch">
                 {results.slice(0, 5).map((result) => (
@@ -276,10 +284,10 @@ export default function Dashboard() {
                 fontSize="15px"
                 mb="1"
               >
-                No sessions yet
+                {t("dashboard.noSessions")}
               </Text>
               <Text fontSize="13px" color="gray.400">
-                Start practicing to see your results here.
+                {t("dashboard.practiceToSeeResults")}
               </Text>
             </Box>
           )}
@@ -296,7 +304,7 @@ export default function Dashboard() {
                 color="gray.400"
                 mb="4"
               >
-                Subject overview
+                {t("dashboard.subjectOverview")}
               </Text>
               <SimpleGrid columns={{ base: 2, md: 4 }} gap="3">
                 {subjectSummary.map((r) => (
@@ -309,7 +317,7 @@ export default function Dashboard() {
                     borderColor="gray.100"
                     cursor="pointer"
                     textAlign="center"
-                    onClick={() => navigate("/subjects")}
+                    onClick={() => navigate("/app/subjects")}
                     _hover={{
                       borderColor: "brand.200",
                       transform: "translateY(-2px)",
@@ -351,19 +359,22 @@ export default function Dashboard() {
               color="rgba(255,255,255,0.6)"
               mb="1"
             >
-              P6 National Exam
+              {t("dashboard.primaryNationalExam")}
             </Text>
             <Text
               fontFamily="heading"
               fontWeight="800"
               fontSize="36px"
-              color="white"
+              color="bg"
               letterSpacing="-1px"
             >
-              {daysUntilExam} days left
+              {daysUntilExam} {t("dashboard.daysLeft")}
             </Text>
-            <Text fontSize="13px" color="rgba(255,255,255,0.65)" mt="1">
-              July 5, 2026
+            <Text fontSize="13px" color="fg.subtle" mt="5">
+              {formatLocalizedDate(
+                "July 5, 2026",
+                localStorage.getItem("lang") ?? "en",
+              )}
             </Text>
           </Box>
         </VStack>

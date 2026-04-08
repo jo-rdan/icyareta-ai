@@ -10,50 +10,39 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-// ─── Enums ────────────────────────────────────────────────────────────────────
-
 export const packTypeEnum = pgEnum("pack_type", [
   "diagnostic",
   "daily_drill",
   "full_mock",
 ]);
-
 export const sessionStatusEnum = pgEnum("session_status", [
   "in_progress",
   "completed",
   "abandoned",
 ]);
 
-// free_trial = 1 hour, 5 questions, 0 RWF
+// free_trial = 1 hour, 3 questions, 0 RWF
 // day_pass   = 24 hours, all subjects, 800 RWF
-// week_pass  = 7 days,  all subjects, 5,000 RWF
-// month_pass = 30 days, all subjects, 9,000 RWF
+// week_pass  = 7 days,   all subjects, 5,000 RWF
 export const accessTypeEnum = pgEnum("access_type", [
   "free_trial",
   "day_pass",
   "week_pass",
-  "month_pass",
 ]);
-
-// ─── Users ────────────────────────────────────────────────────────────────────
 
 export const users = pgTable("users", {
   id: uuid().defaultRandom().primaryKey(),
   phoneNumber: text().notNull().unique(),
   email: text().unique(),
-  childName: text(),
+  childName: text(), // the P6 child this parent is preparing
   hasUsedFreeTrial: boolean().default(false).notNull(),
   createdAt: timestamp().defaultNow().notNull(),
 });
-
-// ─── Subjects ─────────────────────────────────────────────────────────────────
 
 export const subjects = pgTable("subjects", {
   id: uuid().defaultRandom().primaryKey(),
   name: text().notNull().unique(),
 });
-
-// ─── Exam Packs ───────────────────────────────────────────────────────────────
 
 export const examPacks = pgTable("exam_packs", {
   id: uuid().defaultRandom().primaryKey(),
@@ -63,8 +52,6 @@ export const examPacks = pgTable("exam_packs", {
   packType: packTypeEnum().notNull(),
   price: integer().notNull(),
 });
-
-// ─── User Purchases ───────────────────────────────────────────────────────────
 
 export const userPurchases = pgTable("user_purchases", {
   id: uuid().defaultRandom().primaryKey(),
@@ -78,8 +65,6 @@ export const userPurchases = pgTable("user_purchases", {
   purchasedAt: timestamp().defaultNow().notNull(),
   expiresAt: timestamp().notNull(),
 });
-
-// ─── Questions ────────────────────────────────────────────────────────────────
 
 export const questions = pgTable("questions", {
   id: uuid().defaultRandom().primaryKey(),
@@ -95,8 +80,6 @@ export const questions = pgTable("questions", {
   explanation: text(),
   year: integer().notNull(),
 });
-
-// ─── Session Logs ─────────────────────────────────────────────────────────────
 
 export const sessionLogs = pgTable("session_logs", {
   id: uuid().defaultRandom().primaryKey(),
@@ -114,8 +97,6 @@ export const sessionLogs = pgTable("session_logs", {
   createdAt: timestamp().defaultNow().notNull(),
   updatedAt: timestamp().defaultNow().notNull(),
 });
-
-// ─── Exam Results ─────────────────────────────────────────────────────────────
 
 export const examResults = pgTable("exam_results", {
   id: uuid().defaultRandom().primaryKey(),

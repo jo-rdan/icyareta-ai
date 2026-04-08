@@ -10,12 +10,9 @@ import { MomoService } from "../services/ui/momo.service";
 const momoService = new MomoService();
 const purchaseService = new UserPurchaseService();
 
-const PAID_ACCESS_TYPES: AccessType[] = ["day_pass", "week_pass", "month_pass"];
+const PAID_TYPES: AccessType[] = ["day_pass", "week_pass"];
 
-/**
- * POST /api/payment/initiate
- * Body: { accessType: "day_pass" | "week_pass" | "month_pass" }
- */
+/** POST /api/payment/initiate — Body: { accessType } */
 export const initiatePayment = async (
   req: AuthRequest,
   res: Response,
@@ -24,15 +21,13 @@ export const initiatePayment = async (
   const phoneNumber = req.phoneNumber!;
   const { accessType } = req.body as { accessType: AccessType };
 
-  if (!PAID_ACCESS_TYPES.includes(accessType)) {
-    res
-      .status(400)
-      .json({ error: "accessType must be day_pass, week_pass, or month_pass" });
+  if (!PAID_TYPES.includes(accessType)) {
+    res.status(400).json({ error: "accessType must be day_pass or week_pass" });
     return;
   }
 
   const existing = await purchaseService.getActivePurchase(userId);
-  if (existing && PAID_ACCESS_TYPES.includes(existing.accessType)) {
+  if (existing && PAID_TYPES.includes(existing.accessType)) {
     res.status(409).json({
       error: `You already have an active ${purchaseService.getAccessLabel(existing.accessType)}`,
     });
@@ -53,10 +48,7 @@ export const initiatePayment = async (
   res.json({ referenceId, amount, accessType, label });
 };
 
-/**
- * POST /api/payment/callback
- * Called by MTN MoMo — always returns 200 immediately.
- */
+/** POST /api/payment/callback — MTN webhook, always 200 */
 export const paymentCallback = async (
   req: Request,
   res: Response,
@@ -65,24 +57,22 @@ export const paymentCallback = async (
   res.status(200).json({ received: true });
 };
 
-/**
- * POST /api/payment/verify
- * Body: { referenceId }
- * PWA polls this after initiating payment. Creates purchase on success.
- */
+/** POST /api/payment/verify — Body: { referenceId, accessType } */
 export const verifyPayment = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   const userId = req.userId!;
-  const { referenceId } = req.body as { referenceId: string };
+  const { referenceId, accessType } = req.body as {
+    referenceId: string;
+    accessType?: AccessType;
+  };
 
   if (!referenceId) {
     res.status(400).json({ error: "referenceId is required" });
     return;
   }
 
-  // Already activated — idempotent
   const existing = await purchaseService.getActivePurchase(userId);
   if (existing?.transactionReference === referenceId) {
     res.json({ status: "SUCCESSFUL", activated: true });
@@ -92,14 +82,8 @@ export const verifyPayment = async (
   const result = await momoService.getPaymentStatus(referenceId);
 
   if (result.status === "SUCCESSFUL") {
-    // We need the accessType — it's embedded in the externalId prefix but we don't store it.
-    // Safest approach: the PWA sends it along with the referenceId.
-    const { accessType } = req.body as { accessType?: AccessType };
     const resolvedType: AccessType =
-      accessType && PAID_ACCESS_TYPES.includes(accessType)
-        ? accessType
-        : "day_pass";
-
+      accessType && PAID_TYPES.includes(accessType) ? accessType : "day_pass";
     await purchaseService.createPurchase(userId, resolvedType, referenceId);
     res.json({ status: "SUCCESSFUL", activated: true });
     return;

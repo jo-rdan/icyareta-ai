@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 import { Provider } from "./components/ui/provider.tsx";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import "@/components/lang/config.ts";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -10,12 +10,15 @@ import {
   Badge,
   IconButton,
   Spinner,
+  HStack,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import { ArrowLeft } from "lucide-react";
 import api from "../lib/axios";
 import { useQuiz } from "@/context/useQuiz";
+import { useTranslation } from "react-i18next";
+import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
 
 interface Subject {
   id: string;
@@ -43,6 +46,7 @@ const SUBJECT_ICONS: Record<string, string> = {
 };
 
 export default function SubjectSelect() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { startQuiz, error: quizError } = useQuiz();
@@ -80,7 +84,7 @@ export default function SubjectSelect() {
     setStarting(subjectId);
     try {
       await startQuiz(subjectId, subjectName, "diagnostic", !hasPaid);
-      navigate("/quiz");
+      navigate("/app/quiz");
     } finally {
       setStarting(null);
     }
@@ -130,28 +134,32 @@ export default function SubjectSelect() {
                 size="sm"
                 borderRadius="10px"
                 onClick={() => navigate("/")}
+                color={"bg.panel"}
               >
                 <ArrowLeft size={16} />
               </IconButton>
               <Text fontFamily="heading" fontWeight="800" fontSize="16px">
-                Icyareta
+                Xeta
               </Text>
             </Flex>
-            {!hasPaid && (
-              <Badge
-                bg="brand.50"
-                color="brand.600"
-                px="3"
-                py="1"
-                borderRadius="full"
-                fontSize="11px"
-                fontWeight="600"
-                cursor="pointer"
-                onClick={() => navigate("/pricing")}
-              >
-                {trialUsed ? "Get Day Pass" : "Free Trial"}
-              </Badge>
-            )}
+            <HStack>
+              {!hasPaid && (
+                <Badge
+                  bg="brand.50"
+                  color="brand.600"
+                  px="3"
+                  py="1"
+                  borderRadius="full"
+                  fontSize="11px"
+                  fontWeight="600"
+                  cursor="pointer"
+                  onClick={() => navigate("/pricing")}
+                >
+                  {trialUsed ? t("subjects.getAccess") : t("common.freeTrial")}
+                </Badge>
+              )}
+              <LanguageSelection />
+            </HStack>
           </Flex>
         </Container>
       </Box>
@@ -166,7 +174,7 @@ export default function SubjectSelect() {
             textTransform="uppercase"
             color="gray.400"
           >
-            {hasPaid ? "Your subjects" : "Choose a subject"}
+            {hasPaid ? t("subjects.yourSubjects") : t("subjects.chooseSubject")}
           </Text>
           <Heading
             fontFamily="heading"
@@ -174,14 +182,16 @@ export default function SubjectSelect() {
             fontWeight="800"
             letterSpacing="-1px"
           >
-            {hasPaid ? "Practice today 👋" : "Start your free trial"}
+            {hasPaid
+              ? t("subjects.practiceToday")
+              : t("subjects.startYourTrial")}
           </Heading>
           <Text color="gray.500" fontSize="14px">
             {hasPaid
-              ? "Which subject will you practice today?"
+              ? t("subjects.whichSubject")
               : isLocked
-                ? "Get a Day Pass to keep practicing all subjects."
-                : "Pick any subject — 5 questions, no payment needed."}
+                ? t("subjects.getAccessText")
+                : t("subjects.pickAnySubject")}
           </Text>
         </VStack>
 
@@ -314,11 +324,11 @@ export default function SubjectSelect() {
             textAlign="center"
           >
             <Text fontSize="13px" color="brand.700" fontWeight="500">
-              After your free trial, get a{" "}
+              {t("subjects.afterTrial")}{" "}
               <Box as="span" fontWeight="700">
-                Day Pass for 800 RWF
+                {t("common.fullAccess")}
               </Box>{" "}
-              to practice all subjects.
+              {t("subjects.toPractice")}
             </Text>
           </Box>
         )}

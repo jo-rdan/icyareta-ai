@@ -14,10 +14,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const login = async (email: string, code: string) => {
+  const login = async (email: string, code: string, childName?: string) => {
+    // Verify OTP — send childName so backend stores it on first signup
     const { data } = await api.post("/auth/verify-otp", {
       email,
       code,
+      ...(childName ? { childName } : {}),
     });
 
     // Fetch full access status
@@ -29,9 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       id: data.user.id,
       email: data.user.email,
       phoneNumber: data.user.phoneNumber,
+      childName: data.user.childName ?? meRes.data.childName,
       hasUsedFreeTrial: data.user.hasUsedFreeTrial,
       accessStatus: meRes.data.accessStatus,
       accessExpiresAt: meRes.data.accessExpiresAt ?? undefined,
+      accessType: meRes.data.accessType ?? undefined,
     };
 
     setUser(fullUser);
@@ -54,9 +58,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: data.user.id,
           email: data.user.email,
           phoneNumber: data.user.phoneNumber,
+          childName: data.user.childName ?? meRes.data.childName,
           hasUsedFreeTrial: data.user.hasUsedFreeTrial,
           accessStatus: meRes.data.accessStatus,
           accessExpiresAt: meRes.data.accessExpiresAt ?? undefined,
+          accessType: meRes.data.accessType ?? undefined,
         };
 
         setUser(fullUser);

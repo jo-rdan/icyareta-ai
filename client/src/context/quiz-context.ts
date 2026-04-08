@@ -12,6 +12,7 @@ export interface ActiveQuestion {
   id: string;
   text: string;
   options: { A: string; B: string; C: string; D: string };
+  correctOption?: string;
   index: number;
   total: number;
 }

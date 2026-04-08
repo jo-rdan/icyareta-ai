@@ -2,10 +2,12 @@
 import React, { useState } from "react";
 import { QuizContext, type Answer, type QuizSession } from "./quiz-context";
 import api from "@/lib/axios";
+import { useTranslation } from "react-i18next";
 
 export type { Answer, QuizSession } from "./quiz-context";
 
 export function QuizProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [session, setSession] = useState<QuizSession | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,7 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
           id: data.question.id,
           text: data.question.text,
           options: data.question.options,
+          correctOption: data.question.correctOption,
           index: data.currentIndex,
           total: data.total,
         },
@@ -40,8 +43,8 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
         isComplete: false,
         score: null,
       });
-    } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to start quiz");
+    } catch {
+      setError(t("errors.quiz.failedToStart"));
     } finally {
       setIsLoading(false);
     }
@@ -86,6 +89,7 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
                   id: data.nextQuestion.id,
                   text: data.nextQuestion.text,
                   options: data.nextQuestion.options,
+                  correctOption: data.nextQuestion.correctOption,
                   index: data.nextQuestion.index,
                   total: data.nextQuestion.total,
                 },
@@ -94,7 +98,7 @@ export function QuizProvider({ children }: { children: React.ReactNode }) {
         );
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to submit answer");
+      setError(err.response?.data?.error || t("errors.quiz.failedToStart"));
     } finally {
       setIsLoading(false);
     }

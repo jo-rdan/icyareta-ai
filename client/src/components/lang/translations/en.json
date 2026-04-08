@@ -1,0 +1,172 @@
+{
+  "translation": {
+    "common": {
+      "you": "you",
+      "or": "Or",
+      "of": "of",
+      "per": "per",
+      "get": "get",
+      "and": "and",
+      "questions": "Questions",
+      "question": "question",
+      "subjects": "Subjects",
+      "aligned": "Aligned",
+      "fullAccess": "Full Access — from 800 RWF",
+      "freeTrial": "Free Trial",
+      "practice": "Practice",
+      "practiceNow": "Practice now",
+      "correct": "correct",
+      "wrong": "wrong",
+      "answer": "answer",
+      "student": "student",
+      "instantly": "instantly",
+      "continue": "continue"
+    },
+    "errors": {
+      "auth": {
+        "enterValidEmail": "Enter a valid email address",
+        "couldNotSendCode": "Could not send code. Please try again.",
+        "enterValidCode": "Enter the full 4-digit code",
+        "invalidExpiredCode": "Invalid or expired code.",
+        "enterChildName": "Enter your child's name",
+        "couldNotSaveName": "Could not save name. Please try again.",
+        "errorGoogleLogin": "Error while logging in with Google"
+      },
+      "quiz": {
+        "failedToStart": "Failed to start quiz",
+        "failedToAnswer": "Failed to submit answer"
+      }
+    },
+    "landingPage": {
+      "prepExamText": "P6 EXAM PREP • RWANDA 2026",
+      "prepSmarterText": "Prep smarter.",
+      "scoreHigherText": "Score higher.",
+      "subHeroText": " Rwanda's first mobile exam prep platform. Real P6 curriculum questions. Instant results. Works offline.",
+      "tryFree": "Try Free — 3 Questions",
+      "subjectsCovered": "Subjects covered",
+      "howItWorks": "How it works",
+      "hows": {
+        "free": "Try for free",
+        "freeDesc": "Answer 3 real P6 questions on any subject. No payment needed.",
+        "seeResults": "See your results",
+        "seeResultsDesc": "Get your score instantly. See exactly where your child needs to improve.",
+        "subscribe": "Subscribe & practice",
+        "subscribeDesc": "Unlock all subjects and difficulty levels for a full access from only 800 RWF."
+      },
+      "readyToStart": "Ready to start practicing with your child?",
+      "joinParentsText": "Join parents across Kigali preparing their P6 children.",
+      "startFreeTrial": "Start Free Trial"
+    },
+    "auth": {
+      "signin": "Sign in",
+      "verifyCode": "Verify Code",
+      "enterEmail": "Enter your email",
+      "checkEmail": "Check your email",
+      "sendCodeText": "We'll send a 4-digit code to verify your account.",
+      "sentCodeToEmail": "We sent a code to {{email}}. It expires in 5 minutes.",
+      "sendVerificationCode": "Send Verification Code",
+      "signinWithGoogle": "Sign in with Google",
+      "verifyOtp": {
+        "verifyContinue": "Verify & Continue",
+        "didNotReceive": "Didn't receive it?",
+        "resendCode": "Resend code"
+      },
+      "childName": "Your child",
+      "neverShareEmail": "We'll never share your email.",
+      "child": {
+        "who": "Who are you preparing?",
+        "enterChildNameText": "Enter your P6 child's first name. This personalises their practice and results."
+      }
+    },
+    "subjects": {
+      "getAccess": "Get full access",
+      "yourSubjects": "Your subjects",
+      "chooseSubject": "Choose a subject",
+      "practiceToday": "Practice today 👋",
+      "startYourTrial": "Start your free trial",
+      "whichSubject": "Which subject will you practice today?",
+      "getAccessText": "Get full access to keep practicing all subjects.",
+      "pickAnySubject": "Pick any subject — 3 questions, no payment needed.",
+      "lastScore": "Last score",
+      "afterTrial": "After your free trial, get a",
+      "toPractice": "to practice all subjects."
+    },
+    "quiz": {
+      "remaining": "remaining after this",
+      "explanation": " Explanation",
+      "unlocked": "unlocked with a full access"
+    },
+    "score": {
+      "score": "score",
+      "excellentWork": "Excellent work!",
+      "goodEffort": "Good effort!",
+      "keepPractice": "Keep practicing!",
+      "scoreBreakdown": "Score breakdown",
+      "toReview": "to review",
+      "unlockExplanation": " Unlock full explanations",
+      "seeWhyAnswer": "See exactly why each answer is correct",
+      "backSubjects": "Back to subjects",
+      "practiceSubject": "Practice another subject",
+      "viewProgress": "View my progress"
+    },
+    "dashboard": {
+      "welcome": "Welcome back",
+      "logOut": "Sign out",
+      "remainingDays": "Days to exam",
+      "doneSessions": "Sessions done",
+      "averageScore": "Avg score",
+      "startNewSession": "Start a new session",
+      "recentSessions": "Recent sessions",
+      "noSessions": "No sessions yet",
+      "practiceToSeeResults": "Start practicing to see your results here.",
+      "subjectOverview": "Subject overview",
+      "primaryNationalExam": " P6 National Exam",
+      "daysLeft": "days left"
+    },
+    "pricing": {
+      "choosePlan": "Choose your plan",
+      "investInChild": "Invest in your child's exam success",
+      "whyPay": "A private tutor costs 15,000–30,000 RWF per session. Icyareta  gives unlimited P6 practice for less than a cup of juice a day.",
+      "cheaperDayPass": "Just 714 RWF/day — cheaper than the Day Pass",
+      "plansInclude": "Every plan includes",
+      "testimony": "\"I could see my daughter's confidence grow after just one week of practice. She passed her mock with 78%.\"",
+      "witness": "Parent of P6 student, Kigali",
+      "yourMomoNumber": "Your MTN MoMo number",
+      "momoPrompt": "You'll receive a MoMo prompt on this number.",
+      "securePayment": "Secure payment via MTN Mobile Money · Activates instantly · No subscription",
+      "approvePrompt": "Approve on your phone",
+      "momoPaymentOf": "A MoMo payment of",
+      "hasBeenSent": "has been sent to your phone. Approve it to activate your",
+      "waitingConfirmation": "Waiting for MoMo confirmation",
+      "plans": {
+        "day": {
+          "label": "Day Pass",
+          "period": "day",
+          "headline": "Try it today",
+          "subline": "Perfect for a focused practice session before an exam."
+        },
+        "week": {
+          "label": "Week Pass",
+          "period": "week",
+          "badge": "Most Popular",
+          "headline": "Best for exam prep",
+          "subline": "7 days of daily practice — the sweet spot for real improvement."
+        }
+      },
+      "features": {
+        "f1": "All 4 P6 subjects — Maths, English, Science, Social Studies",
+        "f2": "3 difficulty levels: Bronze, Silver & Gold",
+        "f3": "480+ real P6 curriculum questions",
+        "f4": "Step-by-step explanations for every answer",
+        "f5": "Instant score with wrong-answer review",
+        "f6": "Progress tracking so you know what to fix",
+        "f7": "Works offline — no data needed mid-session"
+      }
+    },
+    "legal": {
+      "byContinuing": "By continuing, you agree to Xeta's",
+      "terms": "Terms & Conditions",
+      "privacy": "Privacy policy"
+    }
+  }
+}

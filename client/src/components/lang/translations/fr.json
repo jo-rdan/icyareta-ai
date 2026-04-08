@@ -1,0 +1,168 @@
+{
+  "translation": {
+    "common": {
+      "you": "Vous",
+      "or": "Ou",
+      "of": "of",
+      "per": "par",
+      "get": "obtenez",
+      "and": "et",
+      "questions": "Questions",
+      "question": "question",
+      "subjects": "Sujets",
+      "aligned": "Aligné",
+      "fullAccess": "Accès complet — à partir de 800 RWF",
+      "freeTrial": "Essai gratuit",
+      "practice": "S'entraîner",
+      "correct": "correct",
+      "wrong": "faux",
+      "answer": "réponse",
+      "student": "élève",
+      "instantly": "instantanément",
+      "continue": "continuer"
+    },
+    "errors": {
+      "auth": {
+        "enterValidEmail": "Entrez une adresse e-mail valide",
+        "couldNotSendCode": "Impossible d'envoyer le code. Veuillez réessayer.",
+        "enterValidCode": "Entrez le code complet à 4 chiffres",
+        "invalidExpiredCode": "Code invalide ou expiré.",
+        "childName": "Votre enfant"
+      },
+      "quiz": {
+        "failedToStart": "Échec de démarrer le questionnaire",
+        "failedToAnswer": "Échec de l'envoi de la réponse"
+      }
+    },
+    "landingPage": {
+      "prepExamText": "PRÉPARATION À L'EXAMEN P6 • RWANDA 2026",
+      "prepSmarterText": "Préparez-vous plus intelligemment.",
+      "scoreHigherText": "Obtenez un score plus élevé.",
+      "subHeroText": "Première plateforme mobile de préparation aux examens au Rwanda. Questions conformes au programme de CM2. Résultats instantanés. Fonctionne hors ligne.",
+      "tryFree": "Essai gratuit — 3 questions",
+      "subjectsCovered": "Sujets abordés",
+      "howItWorks": "Comment ça marche",
+      "hows": {
+        "free": "Essai gratuit",
+        "freeDesc": "Répondez à 3 vraies questions de niveau 6 sur n'importe quel sujet. Aucun paiement requis.",
+        "seeResults": "Voir vos résultats",
+        "seeResultsDesc": "Obtenez votre score instantanément. Voyez précisément où votre enfant doit progresser.",
+        "subscribe": "Abonnez-vous et entraînez-vous",
+        "subscribeDesc": "Débloquez tous les sujets et niveaux de difficulté pour un accès complet à partir de seulement 800 RWF."
+      },
+      "readyToStart": "Prêt(e) à commencer à pratiquer avec votre enfant?",
+      "joinParentsText": "Rejoignez les parents de tout Kigali qui préparent leurs enfants en CM2.",
+      "startFreeTrial": "Commencer l'essai gratuit"
+    },
+    "auth": {
+      "signin": "Se connecter",
+      "verifyCode": "Vérifier le code",
+      "enterEmail": "Entrez votre e-mail",
+      "checkEmail": "Vérifiez votre e-mail",
+      "sendCodeText": "Nous vous enverrons un code à 4 chiffres pour vérifier votre compte.",
+      "sentCodeToEmail": "Nous avons envoyé un code à {{email}}. Il expire dans 5 minutes.",
+      "sendVerificationCode": "Envoyer le code de vérification",
+      "signinWithGoogle": "Se connecter avec Google",
+      "verifyOtp": {
+        "verifyContinue": "Vérifier et continuer",
+        "didNotReceive": "Vous ne l'avez pas reçu ?",
+        "resendCode": "Renvoyer le code"
+      },
+      "childName": "Votre enfant",
+      "neverShareEmail": "Nous ne partagerons jamais votre e-mail.",
+      "child": {
+        "who": "Qui préparez-vous ?",
+        "enterChildNameText": "Entrez le prénom de votre enfant en P6. Cela personnalisera son entraînement et ses résultats."
+      }
+    },
+    "subjects": {
+      "getAccess": "Obtenir un accès complet",
+      "yourSubjects": "Vos matières",
+      "chooseSubject": "Choisir une matière",
+      "practiceToday": "S'entraîner aujourd'hui 👋",
+      "startYourTrial": "Commencez votre essai gratuit",
+      "whichSubject": "Quelle matière allez-vous réviser aujourd'hui ?",
+      "getAccessText": "Obtenez un accès complet pour continuer à vous entraîner dans toutes les matières.",
+      "pickAnySubject": "Choisissez n'importe quelle matière — 3 questions, aucun paiement requis.",
+      "afterTrial": "Après votre essai gratuit, profitez d'un",
+      "toPractice": " pour vous entraîner dans toutes les matières."
+    },
+    "quiz": {
+      "remaining": "restantes après ceci",
+      "explanation": " Explication",
+      "unlocked": "débloqué avec un accès complet"
+    },
+    "score": {
+      "score": "score",
+      "excellentWork": "Excellent travail !",
+      "goodEffort": "Bon effort !",
+      "keepPractice": "Continuez à vous entraîner !",
+      "scoreBreakdown": "Détails du score",
+      "toReview": "à réviser",
+      "unlockExplanation": " Débloquer les explications complètes",
+      "seeWhyAnswer": "Découvrez exactement pourquoi chaque réponse est correcte",
+      "backSubjects": "Retour aux matières",
+      "practiceSubject": "S'entraîner sur une autre matière",
+      "viewProgress": "Voir ma progression"
+    },
+    "dashboard": {
+      "welcome": "Bon retour",
+      "logOut": "Se déconnecter",
+      "remainingDays": "Jours avant l'examen",
+      "doneSessions": "Sessions terminées",
+      "averageScore": "Score moyen",
+      "startNewSession": "Commencer une nouvelle session",
+      "recentSessions": "Sessions récentes",
+      "noSessions": "Aucune session pour le moment",
+      "practiceToSeeResults": "Commencez à vous entraîner pour voir vos résultats ici.",
+      "subjectOverview": "Aperçu des matières",
+      "primaryNationalExam": "Examen National P6",
+      "daysLeft": "jours restants"
+    },
+    "pricing": {
+      "choosePlan": "Choisissez votre forfait",
+      "investInChild": "Investissez dans la réussite de votre enfant aux examens",
+      "whyPay": "Un tuteur privé coûte entre 15 000 et 30 000 RWF par session. Icyareta offre un entraînement P6 illimité pour moins qu'un verre de jus par jour.",
+      "cheaperDayPass": "Seulement 714 RWF/jour — moins cher que le Pass Journalier",
+      "plansInclude": "Chaque forfait inclut",
+      "testimony": "\"J'ai pu voir la confiance de ma fille grandir après seulement une semaine d'entraînement. Elle a réussi son examen blanc avec 78 %.\"",
+      "witness": "Parent d'un élève de P6, Kigali",
+      "yourMomoNumber": "Votre numéro MTN MoMo",
+      "momoPrompt": "Vous recevrez une notification MoMo sur ce numéro.",
+      "securePayment": "Paiement sécurisé via MTN Mobile Money · Activation instantanée · Sans abonnement",
+      "approvePrompt": "Approuvez sur votre téléphone",
+      "momoPaymentOf": "Un paiement MoMo de",
+      "hasBeenSent": "a été envoyé sur votre téléphone. Approuvez-le pour activer votre",
+      "waitingConfirmation": "En attente de la confirmation MoMo",
+      "plans": {
+        "day": {
+          "label": "Pass Journalier",
+          "period": "jour",
+          "headline": "Essayez-le aujourd'hui",
+          "subline": "Parfait pour une session d'entraînement intensive avant un examen."
+        },
+        "week": {
+          "label": "Pass Hebdomadaire",
+          "period": "semaine",
+          "badge": "Le plus populaire",
+          "headline": "Idéal pour la préparation",
+          "subline": "7 jours d'entraînement quotidien — le juste milieu pour une réelle progression."
+        }
+      },
+      "features": {
+        "f1": "Les 4 matières P6 — Mathématiques, Anglais, Sciences, Études Sociales",
+        "f2": "3 niveaux de difficulté : Bronze, Argent et Or",
+        "f3": "Plus de 480 vraies questions du programme P6",
+        "f4": "Explications étape par étape pour chaque réponse",
+        "f5": "Score instantané avec révision des mauvaises réponses",
+        "f6": "Suivi de progression pour savoir quoi corriger",
+        "f7": "Fonctionne hors ligne — aucune donnée requise pendant la session"
+      }
+    },
+    "legal": {
+      "byContinuing": "En continuant, vous acceptez les",
+      "terms": "Conditions Générales de Xeta",
+      "privacy": "Politique de confidentialité"
+    }
+  }
+}

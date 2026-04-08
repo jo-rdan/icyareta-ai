@@ -7,11 +7,14 @@ import {
   VStack,
   IconButton,
   Spinner,
+  HStack,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { useQuiz } from "@/context/useQuiz";
+import { useTranslation } from "react-i18next";
+import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
 
 const popIn = keyframes`
   from { opacity: 0; transform: scale(0.96) translateY(8px); }
@@ -21,6 +24,7 @@ const popIn = keyframes`
 const OPTIONS = ["A", "B", "C", "D"] as const;
 
 export default function Quiz() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { session, isLoading, submitAnswer } = useQuiz();
   const [selected, setSelected] = useState<string | null>(null);
@@ -28,11 +32,11 @@ export default function Quiz() {
 
   useEffect(() => {
     if (!session) {
-      navigate("/subjects");
+      navigate("/app/subjects");
       return;
     }
     if (session.isComplete) {
-      navigate("/score");
+      navigate("/app/score");
     }
   }, [session, navigate]);
 
@@ -79,39 +83,45 @@ export default function Quiz() {
 
   const getBg = (letter: string) => {
     if (!revealed) return selected === letter ? "#e8f5ee" : "white";
-    if (letter === selected && lastAnswer?.isCorrect) return "#e8f5ee";
-    if (letter === selected && !lastAnswer?.isCorrect) return "#fdeaea";
-    if (letter === lastAnswer?.correctOption) return "#e8f5ee";
+    if (letter === selected && selected === currentQuestion?.correctOption)
+      return "#e8f5ee";
+    if (letter === selected && selected !== currentQuestion?.correctOption)
+      return "#fdeaea";
+    if (letter === currentQuestion?.correctOption) return "#e8f5ee";
     return "white";
   };
 
   const getBorder = (letter: string) => {
     if (!revealed) return selected === letter ? "#1a6b3c" : "#e4e4e7";
-    if (letter === selected && lastAnswer?.isCorrect) return "#1a6b3c";
-    if (letter === selected && !lastAnswer?.isCorrect) return "#b83030";
-    if (letter === lastAnswer?.correctOption) return "#1a6b3c";
+    if (letter === selected && selected === currentQuestion?.correctOption)
+      return "#1a6b3c";
+    if (letter === selected && selected !== currentQuestion?.correctOption)
+      return "#b83030";
+    if (letter === currentQuestion?.correctOption) return "#1a6b3c";
     return "#e4e4e7";
   };
 
   const getLetterBg = (letter: string) => {
     if (!revealed) return selected === letter ? "#1a6b3c" : "#f4f4f5";
-    if (letter === selected && lastAnswer?.isCorrect) return "#1a6b3c";
-    if (letter === selected && !lastAnswer?.isCorrect) return "#b83030";
-    if (letter === lastAnswer?.correctOption) return "#1a6b3c";
+    if (letter === selected && selected === currentQuestion?.correctOption)
+      return "#1a6b3c";
+    if (letter === selected && selected !== currentQuestion?.correctOption)
+      return "#b83030";
+    if (letter === currentQuestion?.correctOption) return "#1a6b3c";
     return "#f4f4f5";
   };
 
   const getLetterColor = (letter: string) => {
     if (!revealed) return selected === letter ? "white" : "#71717a";
     if (letter === selected) return "white";
-    if (letter === lastAnswer?.correctOption) return "white";
+    if (letter === currentQuestion?.correctOption) return "white";
     return "#d4d4d8";
   };
 
   return (
     <Box minH="100vh" bg="paper">
       {/* Header */}
-      <Box
+      <HStack
         bg="white"
         borderBottom="1px solid"
         borderColor="gray.100"
@@ -126,7 +136,8 @@ export default function Quiz() {
               variant="ghost"
               size="sm"
               borderRadius="10px"
-              onClick={() => navigate("/subjects")}
+              onClick={() => navigate("/app/subjects")}
+              color={"bg.panel"}
             >
               <X size={16} />
             </IconButton>
@@ -154,7 +165,8 @@ export default function Quiz() {
             />
           </Box>
         </Container>
-      </Box>
+        <LanguageSelection />
+      </HStack>
 
       {/* Body */}
       <Container maxW="container.sm" px="6" py="8">
@@ -174,8 +186,10 @@ export default function Quiz() {
                 fontWeight="500"
                 textAlign="center"
               >
-                🎯 Free trial — {total - index - 1} question
-                {total - index - 1 !== 1 ? "s" : ""} remaining after this
+                🎯 {t("common.freeTrial")} — {total - index - 1}{" "}
+                {t("common.question")}
+                {total - index - 1 !== 1 ? "s" : ""}
+                {t("quiz.remaining")}
               </Text>
             </Box>
           )}
@@ -287,7 +301,7 @@ export default function Quiz() {
                   textTransform="uppercase"
                   letterSpacing="0.5px"
                 >
-                  Explanation
+                  {t("quiz.explanation")}
                 </Text>
                 <Text fontSize="13px" color="gray.700" lineHeight="1.6">
                   {lastAnswer.explanation}
@@ -305,12 +319,19 @@ export default function Quiz() {
                 <Text fontSize="13px" color="gray.500">
                   🔒{" "}
                   <Box as="span" fontWeight="600">
-                    Explanations
+                    {t("quiz.explanation")}s
                   </Box>{" "}
-                  unlocked with a Day Pass
+                  {t("quiz.unlocked")}
                 </Text>
               </Box>
             ) : null)}
+
+          <Box bg="gray.50" borderRadius="10px" px="3" py="2">
+            <Text fontSize="10px" color="gray.400" textAlign="center">
+              Inspired by the NESA P6 {session.subjectName} past papers ·
+              Practice simulation — not an official exam
+            </Text>
+          </Box>
         </VStack>
       </Container>
     </Box>

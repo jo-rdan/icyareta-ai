@@ -3,20 +3,18 @@ import { db } from "../db";
 import { userPurchases, users } from "../db/schema";
 
 export type UserPurchase = typeof userPurchases.$inferSelect;
-export type AccessType = "free_trial" | "day_pass" | "week_pass" | "month_pass";
+export type AccessType = "free_trial" | "day_pass" | "week_pass";
 
 export const ACCESS_PRICES: Record<AccessType, number> = {
   free_trial: 0,
   day_pass: 800,
   week_pass: 5000,
-  month_pass: 9000,
 };
 
 const ACCESS_DURATIONS_MS: Record<AccessType, number> = {
-  free_trial: 60 * 60 * 1000, // 1 hour
-  day_pass: 24 * 60 * 60 * 1000, // 24 hours
-  week_pass: 7 * 24 * 60 * 60 * 1000, // 7 days
-  month_pass: 30 * 24 * 60 * 60 * 1000, // 30 days
+  free_trial: 60 * 60 * 1000,
+  day_pass: 24 * 60 * 60 * 1000,
+  week_pass: 7 * 24 * 60 * 60 * 1000,
 };
 
 export class UserPurchaseService {
@@ -78,12 +76,10 @@ export class UserPurchaseService {
   }
 
   getAccessLabel(accessType: AccessType): string {
-    const labels: Record<AccessType, string> = {
+    return {
       free_trial: "Free Trial",
       day_pass: "Day Pass",
       week_pass: "Week Pass",
-      month_pass: "Month Pass",
-    };
-    return labels[accessType];
+    }[accessType];
   }
 }
