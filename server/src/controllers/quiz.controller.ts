@@ -18,29 +18,26 @@ const questionService = new QuestionService();
 const resultService = new ExamResultService();
 const packService = new ExamPackService();
 
-// Question counts per pack type
-const PACK_QUESTION_COUNTS: Record<string, number> = {
-  diagnostic: 5,
-  daily_drill: 8,
-  full_mock: 12,
-};
-
 const FREE_TRIAL_COUNT = 5;
+const PAID_QUESTION_COUNT = 12;
 
 /**
- * POST /api/v1/quiz/start
+ * POST /api/quiz/start
  * Body: { subjectId, packType }
- * Checks access, assigns questions, creates session, returns first question.
+ *
+ * packType from the frontend is ignored for pack lookup — we always use
+ * whichever pack exists for the subject (always "full_mock" after the
+ * ingest rewrite). packType is kept in the body for backwards compatibility.
  */
 export const startQuiz = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   const userId = req.userId!;
-  const { subjectId, packType } = req.body;
+  const { subjectId } = req.body;
 
-  if (!subjectId || !packType) {
-    res.status(400).json({ error: "subjectId and packType are required" });
+  if (!subjectId) {
+    res.status(400).json({ error: "subjectId is required" });
     return;
   }
 
@@ -55,39 +52,41 @@ export const startQuiz = async (
 
   // Block if trial already used and no active purchase
   if (!activePurchase && user.hasUsedFreeTrial) {
-    res
-      .status(403)
-      .json({ error: "No active access. Please subscribe to continue." });
+    res.status(403).json({
+      error: "No active access. Please subscribe to continue.",
+    });
     return;
   }
 
-  // Find the pack for this subject + type
+  // Get the pack for this subject — just take the first one found.
+  // Since the ingest script now creates a single "full_mock" pack per
+  // subject, this will always be that pack. If multiple packs somehow
+  // exist, the first one is fine.
   const packs = await packService.getPacksBySubjectId(subjectId);
-  const pack = packs.find(
-    (p) => p.packType === (isTrial ? "diagnostic" : packType),
-  );
-
-  if (!pack) {
-    res.status(404).json({ error: "Pack not found for this subject" });
+  if (packs.length === 0) {
+    res.status(404).json({
+      error:
+        "No question pack found for this subject. Run the ingest script first.",
+    });
     return;
   }
+  const pack = packs[0];
 
-  // Get questions
+  // Fetch and shuffle all questions for this pack, then slice to count
   const allQuestionIds = await questionService.getQuestionsForSession(
     pack.id,
     pack.packType,
   );
-  const count = isTrial
-    ? FREE_TRIAL_COUNT
-    : (PACK_QUESTION_COUNTS[packType] ?? 5);
+
+  const count = isTrial ? FREE_TRIAL_COUNT : PAID_QUESTION_COUNT;
   const assignedIds = allQuestionIds.slice(0, count);
 
   if (assignedIds.length === 0) {
-    res.status(404).json({ error: "No questions available for this pack" });
+    res.status(404).json({ error: "No questions available for this subject." });
     return;
   }
 
-  // Create session
+  // Initialise session (abandons any existing in_progress session first)
   const sessionId = uuidv4();
   await sessionService.initializeQuiz(
     userId,
@@ -97,13 +96,16 @@ export const startQuiz = async (
     assignedIds,
   );
 
-  // Mark free trial as used
+  // Mark free trial as used immediately so a refresh can't start a second trial
   if (isTrial) {
     await userService.markTrialUsed(userId);
   }
 
-  // Return first question
   const firstQuestion = await questionService.getQuestionById(assignedIds[0]);
+  if (!firstQuestion) {
+    res.status(500).json({ error: "Failed to load first question." });
+    return;
+  }
 
   res.json({
     sessionId,
@@ -111,18 +113,17 @@ export const startQuiz = async (
     total: assignedIds.length,
     currentIndex: 0,
     question: {
-      id: firstQuestion!.id,
-      text: firstQuestion!.questionText,
-      options: firstQuestion!.options,
-      correctOption: firstQuestion!.correctOption,
+      id: firstQuestion.id,
+      text: firstQuestion.questionText,
+      options: firstQuestion.options,
+      correctOption: firstQuestion.correctOption,
     },
   });
 };
 
 /**
- * POST /api/v1/quiz/answer
+ * POST /api/quiz/answer
  * Body: { sessionId, selectedOption }
- * Saves answer, returns next question or final score.
  */
 export const submitAnswer = async (
   req: AuthRequest,
@@ -143,7 +144,6 @@ export const submitAnswer = async (
     return;
   }
 
-  // Get active session for this user
   const session = await sessionService.getActiveSessionForUser(userId);
   if (!session || session.sessionId !== sessionId) {
     res.status(404).json({ error: "Session not found or already completed" });
@@ -161,10 +161,10 @@ export const submitAnswer = async (
     return;
   }
 
-  const isCorrect = questionService.evaluateAnswer(
+  const { isCorrect } = questionService.evaluateAnswer(
     currentQuestion,
     selectedOption,
-  ).isCorrect;
+  );
 
   const existingAnswers =
     (session.answers as Array<{
@@ -172,6 +172,7 @@ export const submitAnswer = async (
       selectedOption: string;
       isCorrect: boolean;
     }>) ?? [];
+
   const updatedAnswers = [
     ...existingAnswers,
     { questionId: currentQuestion.id, selectedOption, isCorrect },
@@ -183,30 +184,22 @@ export const submitAnswer = async (
   await sessionService.updateSessionProgress(userId, nextIndex, updatedAnswers);
 
   if (isComplete) {
-    // Complete session
     await sessionService.completeSession(userId);
 
-    const score = questionService.calculateScore(updatedAnswers as any);
+    const score = questionService.calculateScore(updatedAnswers);
 
-    // Save result
+    // Determine packType for the result record
+    const pack = await packService.getPackById(currentQuestion.packId);
+    const packType = pack?.packType ?? "full_mock";
+
     await resultService.saveResult(
       userId,
       session.selectedSubjectId!,
-      currentQuestion.packId
-        ? ((await packService.getPackById(currentQuestion.packId))?.packType ??
-            "diagnostic")
-        : "diagnostic",
+      packType,
       score.score,
       score.total,
     );
 
-    // Deactivate free trial purchase if applicable
-    const purchase = await purchaseService.getActivePurchase(userId);
-    if (purchase && purchase.accessType === "free_trial") {
-      await purchaseService.deactivatePurchase(purchase.id);
-    }
-
-    // Get subject name for response
     const subjectRows = await db
       .select({ name: subjects.name })
       .from(subjects)
@@ -232,7 +225,6 @@ export const submitAnswer = async (
     return;
   }
 
-  // Return next question
   const nextQuestion = await questionService.getQuestionById(
     assignedIds[nextIndex],
   );
@@ -257,15 +249,14 @@ export const submitAnswer = async (
 };
 
 /**
- * GET /api/v1/quiz/session
- * Returns the current active session for the user (for resuming).
+ * GET /api/quiz/session
+ * Returns the current active session (for resuming after a page refresh).
  */
 export const getSession = async (
   req: AuthRequest,
   res: Response,
 ): Promise<void> => {
   const userId = req.userId!;
-
   const session = await sessionService.getActiveSessionForUser(userId);
 
   if (!session) {

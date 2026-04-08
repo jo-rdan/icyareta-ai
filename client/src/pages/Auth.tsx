@@ -227,7 +227,7 @@ export default function Auth() {
                 <Text flexShrink="0">{t("common.or")}</Text>
                 <Separator flex="1" size={"xs"} />
               </HStack>
-              <Button onClick={handleGoogleSignin}>
+              <Button onClick={handleGoogleSignin} bg={"white"}>
                 <FcGoogle />
                 {t("auth.signinWithGoogle")}
               </Button>
