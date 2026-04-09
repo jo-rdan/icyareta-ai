@@ -192,9 +192,9 @@ export default function Landing() {
                 py="7"
                 fontSize="16px"
                 bg="white"
-                color="brand.600"
+                color="black"
                 _hover={{
-                  bg: "brand.50",
+                  bg: "bg.50",
                   transform: "translateY(-2px)",
                   boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
                 }}

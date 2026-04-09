@@ -19,6 +19,7 @@ import api from "../lib/axios";
 import { useQuiz } from "@/context/useQuiz";
 import { useTranslation } from "react-i18next";
 import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
+import { LuDoorOpen } from "react-icons/lu";
 
 interface Subject {
   id: string;
@@ -48,7 +49,7 @@ const SUBJECT_ICONS: Record<string, string> = {
 export default function SubjectSelect() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { startQuiz, error: quizError } = useQuiz();
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -142,7 +143,7 @@ export default function SubjectSelect() {
                 Xeta
               </Text>
             </Flex>
-            <HStack>
+            <HStack columnGap={4}>
               {!hasPaid && (
                 <Badge
                   bg="brand.50"
@@ -159,6 +160,9 @@ export default function SubjectSelect() {
                 </Badge>
               )}
               <LanguageSelection />
+              <IconButton variant={"ghost"} color={"black"} onClick={logout}>
+                <LuDoorOpen />
+              </IconButton>
             </HStack>
           </Flex>
         </Container>

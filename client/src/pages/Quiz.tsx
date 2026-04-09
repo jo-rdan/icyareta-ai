@@ -188,8 +188,7 @@ export default function Quiz() {
               >
                 🎯 {t("common.freeTrial")} — {total - index - 1}{" "}
                 {t("common.question")}
-                {total - index - 1 !== 1 ? "s" : ""}
-                {t("quiz.remaining")}
+                {total - index - 1 !== 1 ? "s" : ""} {t("quiz.remaining")}
               </Text>
             </Box>
           )}

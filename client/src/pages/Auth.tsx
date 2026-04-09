@@ -17,6 +17,7 @@ import {
   Dialog,
   Portal,
   Center,
+  Spinner,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/useAuth";
@@ -27,6 +28,7 @@ import { FcGoogle } from "react-icons/fc";
 import { LEGAL_TEXT } from "@/legat";
 import { parseMarkdown } from "@/lib/parser";
 import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
+import { capitalize } from "@/lib/capitalize";
 
 type Step = "email" | "otp" | "childName";
 
@@ -43,14 +45,24 @@ export default function Auth() {
     title: "",
     content: "",
   });
-  const { login, googleLogin, user } = useAuth();
+  const { login, googleLogin, user, nextStep } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user?.childName) {
-      navigate("/app/subjects");
+    if (user && nextStep) {
+      console.log("user", user);
+      setIsLoading(true);
+      if (user?.childName) {
+        navigate("/app/subjects");
+      } else {
+        setIsLoading(false);
+        setStep("childName");
+      }
     }
-  }, [user?.childName, navigate]);
+    return () => {
+      setIsLoading(false);
+    };
+  }, [user, nextStep, user?.childName, navigate]);
   const sendOtp = async () => {
     if (!email.includes("@")) {
       setError(t("errors.auth.enterValidEmail"));
@@ -125,11 +137,11 @@ export default function Auth() {
     try {
       googleLogin();
       // If childName is not set, ask for it
-      if (!user?.childName) {
-        setStep("childName");
-        setIsLoading(false);
-        return;
-      }
+      // if (!user?.childName) {
+      //   setStep("childName");
+      //   setIsLoading(false);
+      //   return;
+      // }
       // navigate("/subjects");
     } catch {
       setError(t("errors.auth.errorGoogleLogin"));
@@ -144,6 +156,25 @@ export default function Auth() {
       content: LEGAL_TEXT[title],
     }));
   };
+
+  if (isLoading) {
+    return (
+      <Box
+        minH="100vh"
+        bg="paper"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Spinner
+          color="brand.600"
+          borderWidth="3px"
+          width="40px"
+          height="40px"
+        />
+      </Box>
+    );
+  }
 
   return (
     <Center minH="100vh" bg="paper" display="flex" alignItems="center">
@@ -227,7 +258,7 @@ export default function Auth() {
                 <Text flexShrink="0">{t("common.or")}</Text>
                 <Separator flex="1" size={"xs"} />
               </HStack>
-              <Button onClick={handleGoogleSignin} bg={"white"}>
+              <Button onClick={handleGoogleSignin} bg={"white"} color={"black"}>
                 <FcGoogle />
                 {t("auth.signinWithGoogle")}
               </Button>
@@ -379,7 +410,7 @@ export default function Auth() {
                 disabled={!childName.trim()}
                 onClick={saveChildName}
               >
-                {t("common.continue")} →
+                {capitalize(t("common.continue"))} →
               </Button>
             </VStack>
           </>

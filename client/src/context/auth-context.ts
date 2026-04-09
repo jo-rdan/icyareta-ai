@@ -16,6 +16,7 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   token: string | null;
+  nextStep: string | null;
   login: (email: string, code: string, childName?: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
