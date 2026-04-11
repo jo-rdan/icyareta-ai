@@ -8,7 +8,6 @@ import {
   Text,
   VStack,
   Input,
-  IconButton,
   HStack,
   Separator,
   Field,
@@ -18,10 +17,10 @@ import {
   Portal,
   Center,
   Spinner,
+  Image,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/useAuth";
-import { ArrowLeft } from "lucide-react";
 import api from "@/lib/axios";
 import { useTranslation } from "react-i18next";
 import { FcGoogle } from "react-icons/fc";
@@ -29,8 +28,11 @@ import { LEGAL_TEXT } from "@/legat";
 import { parseMarkdown } from "@/lib/parser";
 import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
 import { capitalize } from "@/lib/capitalize";
+import logoIcon from "@/assets/logos/logo_light.svg";
 
 type Step = "email" | "otp" | "childName";
+
+const HIDE_EMAIL_INPUT = true;
 
 export default function Auth() {
   const { t } = useTranslation();
@@ -50,9 +52,9 @@ export default function Auth() {
 
   useEffect(() => {
     if (user && nextStep) {
-      console.log("user", user);
       setIsLoading(true);
       if (user?.childName) {
+        setIsLoading(false);
         navigate("/app/subjects");
       } else {
         setIsLoading(false);
@@ -124,25 +126,9 @@ export default function Auth() {
     }
   };
 
-  const goBack = () => {
-    if (step === "email") {
-      navigate(-1);
-    } else {
-      setStep("email");
-      setOtp(["", "", "", ""]);
-    }
-  };
-
   const handleGoogleSignin = () => {
     try {
       googleLogin();
-      // If childName is not set, ask for it
-      // if (!user?.childName) {
-      //   setStep("childName");
-      //   setIsLoading(false);
-      //   return;
-      // }
-      // navigate("/subjects");
     } catch {
       setError(t("errors.auth.errorGoogleLogin"));
     }
@@ -177,27 +163,17 @@ export default function Auth() {
   }
 
   return (
-    <Center minH="100vh" bg="paper" display="flex" alignItems="center">
+    <Center minH="90vh" bg="paper" display="flex" alignItems="center">
       <Container maxW="440px" px="6" py="12">
-        <Flex mb="8" align="center" justify="space-between">
+        <Flex mb="20" align="center" justify="space-between">
           <HStack>
-            <IconButton
-              aria-label="Back"
-              variant="ghost"
-              size="sm"
-              borderRadius="10px"
-              onClick={goBack}
-              color={"bg.panel"}
-            >
-              <ArrowLeft size={16} />
-            </IconButton>
-            <Text fontFamily="heading" fontWeight="700" fontSize="14px">
-              {step === "email"
-                ? t("auth.signin")
-                : step === "otp"
-                  ? t("auth.verifyCode")
-                  : t("auth.childName")}
-            </Text>
+            {step === "email" || step === "otp" ? (
+              <Image src={logoIcon} w={100} />
+            ) : (
+              <Text fontFamily="heading" fontWeight="700" fontSize="14px">
+                {t("auth.childName")}
+              </Text>
+            )}
           </HStack>
           <Box>
             <LanguageSelection />
@@ -215,49 +191,52 @@ export default function Auth() {
                 letterSpacing="-1px"
                 mb="2"
               >
-                {t("auth.enterEmail")}
+                {t("auth.signin")}
               </Heading>
-              <Text color="gray.500" fontSize="14px" lineHeight="1.6">
-                {t("auth.sendCodeText")}
-              </Text>
             </Box>
             {error && <ErrorBox message={error} />}
             <VStack gap="4" align="stretch">
-              <Field.Root required colorPalette={"green"}>
-                <Field.Label>
-                  Email <Field.RequiredIndicator />
-                </Field.Label>
-                <Input
-                  placeholder="Enter your email"
-                  variant="outline"
-                  borderColor={"fg.muted"}
-                  px={5}
-                  onChange={(e) => setEmail(e.target.value)}
-                  bg={"white"}
-                  type="email"
-                  onKeyDown={(e) => e.key === "Enter" && sendOtp()}
-                />
-                <Field.HelperText>{t("auth.neverShareEmail")}</Field.HelperText>
-              </Field.Root>
-              <Button
-                size="lg"
-                w="full"
-                h="56px"
-                fontSize="16px"
-                bg="#1a6b3c"
-                color="white"
-                _hover={{ bg: "#145530" }}
-                loading={isLoading}
-                disabled={!email.includes("@")}
-                onClick={sendOtp}
-              >
-                {t("auth.sendVerificationCode")}
-              </Button>
-              <HStack>
-                <Separator flex="1" size={"xs"} />
-                <Text flexShrink="0">{t("common.or")}</Text>
-                <Separator flex="1" size={"xs"} />
-              </HStack>
+              {!HIDE_EMAIL_INPUT && (
+                <>
+                  <Field.Root required colorPalette={"green"}>
+                    <Field.Label>
+                      Email <Field.RequiredIndicator />
+                    </Field.Label>
+                    <Input
+                      placeholder="Enter your email"
+                      variant="outline"
+                      borderColor={"fg.muted"}
+                      px={5}
+                      onChange={(e) => setEmail(e.target.value)}
+                      bg={"white"}
+                      type="email"
+                      onKeyDown={(e) => e.key === "Enter" && sendOtp()}
+                    />
+                    <Field.HelperText>
+                      {t("auth.neverShareEmail")}
+                    </Field.HelperText>
+                  </Field.Root>
+                  <Button
+                    size="lg"
+                    w="full"
+                    h="56px"
+                    fontSize="16px"
+                    bg="#1a6b3c"
+                    color="white"
+                    _hover={{ bg: "#145530" }}
+                    loading={isLoading}
+                    disabled={!email.includes("@")}
+                    onClick={sendOtp}
+                  >
+                    {t("auth.sendVerificationCode")}
+                  </Button>
+                  <HStack>
+                    <Separator flex="1" size={"xs"} />
+                    <Text flexShrink="0">{t("common.or")}</Text>
+                    <Separator flex="1" size={"xs"} />
+                  </HStack>
+                </>
+              )}
               <Button onClick={handleGoogleSignin} bg={"white"} color={"black"}>
                 <FcGoogle />
                 {t("auth.signinWithGoogle")}
@@ -287,7 +266,7 @@ export default function Auth() {
         )}
 
         {/* ── OTP step ── */}
-        {step === "otp" && (
+        {step === "otp" && !HIDE_EMAIL_INPUT && (
           <>
             <Box mb="8">
               <Heading

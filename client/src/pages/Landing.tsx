@@ -11,10 +11,12 @@ import {
   SimpleGrid,
   Badge,
   Center,
+  Image,
 } from "@chakra-ui/react";
 import { keyframes } from "@emotion/react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import logoIcon from "@/assets/logos/logo_dark.svg";
 
 const fadeUp = keyframes`
   from { opacity: 0; transform: translateY(24px); }
@@ -88,23 +90,7 @@ export default function Landing() {
         <Container maxW="container.md" position="relative">
           {/* Logo */}
           <Flex align="center" mb="10" columnGap={"70%"}>
-            <Box
-              bg="rgba(255,255,255,0.15)"
-              px="4"
-              py="2"
-              borderRadius="full"
-              border="1px solid rgba(255,255,255,0.2)"
-            >
-              <Text
-                fontFamily="heading"
-                fontWeight="800"
-                fontSize="18px"
-                color="white"
-                letterSpacing="-0.5px"
-              >
-                Xeta
-              </Text>
-            </Box>
+            <Image src={logoIcon} w={100} />
             <LanguageSelection />
           </Flex>
 
