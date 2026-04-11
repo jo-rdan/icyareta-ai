@@ -45,7 +45,6 @@ function AppRoutes() {
       {/* Public pages */}
       <Route path="/landing" element={<Landing />} />
       <Route path="/auth" element={<Auth />} />
-      <Route path="/pricing" element={<Pricing />} />
 
       {/* Protected app — all under /app */}
       <Route path="/app" element={<ProtectedRoute />}>
@@ -53,6 +52,7 @@ function AppRoutes() {
         <Route path="quiz" element={<Quiz />} />
         <Route path="score" element={<Score />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="pricing" element={<Pricing />} />
       </Route>
 
       {/* Catch-all */}

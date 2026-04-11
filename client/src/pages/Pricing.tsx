@@ -77,19 +77,6 @@ export default function Pricing() {
       icon: <LuStar size={16} />,
       popular: true,
     },
-    // {
-    //   key: "month_pass",
-    //   label: "Month Pass",
-    //   price: 9000,
-    //   period: "month",
-    //   badge: "Save 63%",
-    //   badgeColor: "#1a6b3c",
-    //   headline: "Full season coverage",
-    //   subline:
-    //     "30 days at just 300 RWF/day. The smartest investment before July.",
-    //   icon: <LuStar size={16} />,
-    //   popular: false,
-    // },
   ];
 
   const activePlan = PLANS.find((p) => p.key === selected)!;
@@ -110,13 +97,13 @@ export default function Pricing() {
     setIsLoading(true);
 
     try {
-      const fullPhone = `+250${digits.slice(-9)}`;
+      const fullPhone = `250${digits.slice(-9)}`;
 
       if (!user.phoneNumber || user.phoneNumber === user.email) {
-        await api.patch("/api/user/phone", { phoneNumber: fullPhone });
+        await api.patch("/user/phone", { phoneNumber: fullPhone });
       }
 
-      const { data } = await api.post("/api/payment/initiate", {
+      const { data } = await api.post("/payment/initiate", {
         accessType: selected,
       });
 
@@ -139,7 +126,7 @@ export default function Pricing() {
     const check = async (): Promise<void> => {
       attempts++;
       try {
-        const { data } = await api.post("/api/payment/verify", {
+        const { data } = await api.post("/payment/verify", {
           referenceId,
           accessType: selected,
         });
@@ -516,7 +503,7 @@ export default function Pricing() {
         <Portal>
           <Dialog.Backdrop backdropFilter="blur(4px)" />
           <Dialog.Positioner>
-            <Dialog.Content borderRadius="24px" mx="6" p="2">
+            <Dialog.Content borderRadius="24px" mx="6" p="2" bg={"white"}>
               <Dialog.Body py="8" px="6" textAlign="center">
                 <VStack gap="4">
                   <Spinner

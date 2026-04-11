@@ -5,10 +5,12 @@ import {
   AccessType,
   ACCESS_PRICES,
 } from "../services/user-purchase.service";
+import { UserService } from "../services/user.service";
 import { MomoService } from "../services/ui/momo.service";
 
 const momoService = new MomoService();
 const purchaseService = new UserPurchaseService();
+const userService = new UserService();
 
 const PAID_TYPES: AccessType[] = ["day_pass", "week_pass"];
 
@@ -18,7 +20,6 @@ export const initiatePayment = async (
   res: Response,
 ): Promise<void> => {
   const userId = req.userId!;
-  const phoneNumber = req.phoneNumber!;
   const { accessType } = req.body as { accessType: AccessType };
 
   if (!PAID_TYPES.includes(accessType)) {
@@ -34,15 +35,22 @@ export const initiatePayment = async (
     return;
   }
 
+  // Read phone from DB — the Pricing page patches it before calling this
+  const user = await userService.findById(userId);
+  if (!user?.phoneNumber) {
+    res.status(400).json({ error: "Phone number required for MoMo payment" });
+    return;
+  }
+
   const amount = ACCESS_PRICES[accessType];
   const externalId = `ICY-${userId.slice(0, 8)}-${Date.now()}`;
   const label = purchaseService.getAccessLabel(accessType);
 
   const referenceId = await momoService.requestToPay(
-    phoneNumber,
+    user.phoneNumber,
     amount,
     externalId,
-    `Icyareta ${label} — Full P6 Access`,
+    `Xeta ${label} - Full P6 Access`,
   );
 
   res.json({ referenceId, amount, accessType, label });
@@ -73,6 +81,7 @@ export const verifyPayment = async (
     return;
   }
 
+  // Already activated — idempotent check
   const existing = await purchaseService.getActivePurchase(userId);
   if (existing?.transactionReference === referenceId) {
     res.json({ status: "SUCCESSFUL", activated: true });

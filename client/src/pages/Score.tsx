@@ -285,7 +285,7 @@ export default function Score() {
                 h="56px"
                 fontSize="15px"
                 colorPalette="brand"
-                onClick={() => handleNavigation("/pricing")}
+                onClick={() => handleNavigation("/app/pricing")}
               >
                 {t("common.fullAccess")}
               </Button>

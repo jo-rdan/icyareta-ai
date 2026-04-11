@@ -49,6 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      setNextStep("childName");
+
       const { data, status } = await api.post("/auth/google-signin", {
         accessToken: tokenResponse.access_token,
       });
@@ -70,7 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(fullUser);
         setToken(data.token);
-        setNextStep("childName");
         localStorage.setItem("icy_token", data.token);
         localStorage.setItem("icy_user", JSON.stringify(fullUser));
       }

@@ -79,7 +79,7 @@ export default function SubjectSelect() {
 
   const handleSelect = async (subjectId: string, subjectName: string) => {
     if (isLocked) {
-      navigate("/pricing");
+      navigate("/app/pricing");
       return;
     }
     setStarting(subjectId);
@@ -154,7 +154,7 @@ export default function SubjectSelect() {
                   fontSize="11px"
                   fontWeight="600"
                   cursor="pointer"
-                  onClick={() => navigate("/pricing")}
+                  onClick={() => navigate("/app/pricing")}
                 >
                   {trialUsed ? t("subjects.getAccess") : t("common.freeTrial")}
                 </Badge>

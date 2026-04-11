@@ -14,6 +14,9 @@ export interface MomoRequestToPayResult {
 }
 
 export class MomoService {
+  // Mechanical necessity: Determine env once to keep methods clean
+  private readonly isSandbox = MOMO_ENVIRONMENT.toLowerCase() === "sandbox";
+
   private async getAccessToken(): Promise<string> {
     const credentials = Buffer.from(
       `${MOMO_API_USER}:${MOMO_API_KEY}`,
@@ -36,10 +39,6 @@ export class MomoService {
     return data.access_token;
   }
 
-  /**
-   * Initiates a payment request to a customer's phone.
-   * Returns the referenceId used to track the payment status.
-   */
   async requestToPay(
     phoneNumber: string,
     amount: number,
@@ -52,20 +51,22 @@ export class MomoService {
     // 1. Clean MSISDN (Strictly digits)
     const sanitizedPhone = phoneNumber.replace(/\D/g, "");
 
-    // 2. Validate Amount (Must be a positive integer/float as string)
     if (amount <= 0) throw new Error("Amount must be greater than 0");
+
+    // Dynamic configuration based on environment
+    const currency = this.isSandbox ? "EUR" : "RWF";
+    const targetPartyId = this.isSandbox ? "46733123453" : sanitizedPhone;
 
     const payload = {
       amount: amount.toString(),
-      currency: "EUR",
-      externalId: externalId.replace(/\D/g, "").substring(0, 10), // Use numbers only for safety
+      currency: currency,
+      externalId: externalId.replace(/\D/g, "").substring(0, 10),
       payer: {
         partyIdType: "MSISDN",
-        partyId: "46733123453", // Standard Sandbox Test Number
+        partyId: targetPartyId,
       },
-      // Use only standard ASCII characters
-      payerMessage: "Icyareta Day Pass P6 Access".substring(0, 40),
-      payeeNote: "Icyareta Day Pass P6 Access".substring(0, 40),
+      payerMessage: note.substring(0, 40),
+      payeeNote: note.substring(0, 40),
     };
 
     const response = await fetch(
@@ -78,29 +79,24 @@ export class MomoService {
           "X-Target-Environment": MOMO_ENVIRONMENT,
           "Content-Type": "application/json",
           "Ocp-Apim-Subscription-Key": MOMO_SUBSCRIPTION_KEY,
-          // REMOVE Callback URL if testing locally without ngrok
-          ...(MOMO_CALLBACK_URL.includes("localhost")
-            ? {}
-            : { "X-Callback-Url": MOMO_CALLBACK_URL }),
+          ...(MOMO_CALLBACK_URL && !MOMO_CALLBACK_URL.includes("localhost")
+            ? { "X-Callback-Url": MOMO_CALLBACK_URL }
+            : {}),
         },
         body: JSON.stringify(payload),
       },
     );
 
     if (!response.ok) {
-      // 400 errors usually have a JSON body with an "error" code
-      const errorData = await response.json().catch(() => ({}));
+      const rawText = await response.text();
       throw new Error(
-        `MoMo Error: ${response.status} - ${errorData.code || "Bad Request"}`,
+        `MoMo Error: ${response.status} - ${rawText || "Empty response"}`,
       );
     }
 
     return referenceId;
   }
 
-  /**
-   * Checks the status of a payment by referenceId.
-   */
   async getPaymentStatus(referenceId: string): Promise<MomoRequestToPayResult> {
     const accessToken = await this.getAccessToken();
 

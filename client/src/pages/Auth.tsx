@@ -18,6 +18,7 @@ import {
   Center,
   Spinner,
   Image,
+  IconButton,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/useAuth";
@@ -51,20 +52,24 @@ export default function Auth() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && nextStep) {
+    if (nextStep) {
       setIsLoading(true);
-      if (user?.childName) {
-        setIsLoading(false);
-        navigate("/app/subjects");
-      } else {
-        setIsLoading(false);
-        setStep("childName");
+      if (user) {
+        if (user?.childName) {
+          setIsLoading(false);
+          navigate("/app/subjects");
+        } else {
+          setIsLoading(false);
+          setStep("childName");
+        }
       }
     }
+    // setIsLoading(false)
     return () => {
       setIsLoading(false);
     };
   }, [user, nextStep, user?.childName, navigate]);
+
   const sendOtp = async () => {
     if (!email.includes("@")) {
       setError(t("errors.auth.enterValidEmail"));
@@ -170,9 +175,21 @@ export default function Auth() {
             {step === "email" || step === "otp" ? (
               <Image src={logoIcon} w={100} />
             ) : (
-              <Text fontFamily="heading" fontWeight="700" fontSize="14px">
-                {t("auth.childName")}
-              </Text>
+              <>
+                <IconButton
+                  aria-label="Back"
+                  variant="ghost"
+                  size="sm"
+                  borderRadius="10px"
+                  onClick={() => setStep("email")}
+                  color={"bg.panel"}
+                >
+                  <Text fontSize="18px">←</Text>
+                </IconButton>
+                <Text fontFamily="heading" fontWeight="700" fontSize="14px">
+                  {t("auth.childName")}
+                </Text>
+              </>
             )}
           </HStack>
           <Box>

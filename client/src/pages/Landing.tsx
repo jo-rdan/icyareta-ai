@@ -199,7 +199,7 @@ export default function Landing() {
                 color="white"
                 outline="1px solid rgba(255,255,255,0.25)"
                 _hover={{ bg: "rgba(255,255,255,0.18)" }}
-                onClick={() => navigate("/pricing")}
+                onClick={() => navigate("/app/pricing")}
               >
                 {t("common.fullAccess")}
               </Button>
