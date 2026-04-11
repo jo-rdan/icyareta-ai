@@ -89,7 +89,7 @@ export default function Landing() {
 
         <Container maxW="container.md" position="relative">
           {/* Logo */}
-          <Flex align="center" mb="10" columnGap={"70%"}>
+          <Flex align="center" mb="10" columnGap={"50%"}>
             <Image src={logoIcon} w={100} />
             <LanguageSelection />
           </Flex>
