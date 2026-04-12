@@ -52,14 +52,12 @@ export default function Auth() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user) {
-      if (user?.childName) {
-        setIsLoading(false);
-        navigate("/app/subjects");
-      } else {
-        setIsLoading(false);
-        setStep("childName");
-      }
+    if (user && user?.childName) {
+      setIsLoading(false);
+      navigate("/app/subjects");
+    } else {
+      setIsLoading(false);
+      setStep("childName");
     }
     // setIsLoading(false)
     return () => {
