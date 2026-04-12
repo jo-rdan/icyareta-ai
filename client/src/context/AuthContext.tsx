@@ -14,8 +14,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [nextStep, setNextStep] = useState<string | null>(null);
-
   const login = async (email: string, code: string, childName?: string) => {
     // Verify OTP — send childName so backend stores it on first signup
     const { data } = await api.post("/auth/verify-otp", {
@@ -42,15 +40,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(fullUser);
     setToken(data.token);
-    setNextStep("childName");
     localStorage.setItem("icy_token", data.token);
     localStorage.setItem("icy_user", JSON.stringify(fullUser));
   };
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      setNextStep("childName");
-
       const { data, status } = await api.post("/auth/google-signin", {
         accessToken: tokenResponse.access_token,
       });
@@ -95,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, googleLogin, logout, updateUser, nextStep }}
+      value={{ user, token, login, googleLogin, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>

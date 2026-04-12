@@ -48,27 +48,26 @@ export default function Auth() {
     title: "",
     content: "",
   });
-  const { login, googleLogin, user, nextStep } = useAuth();
+  const { login, googleLogin, user } = useAuth();
   const navigate = useNavigate();
 
+  console.log("load", isLoading);
+
   useEffect(() => {
-    if (nextStep) {
-      setIsLoading(true);
-      if (user) {
-        if (user?.childName) {
-          setIsLoading(false);
-          navigate("/app/subjects");
-        } else {
-          setIsLoading(false);
-          setStep("childName");
-        }
+    if (user) {
+      if (user?.childName) {
+        setIsLoading(false);
+        navigate("/app/subjects");
+      } else {
+        setIsLoading(false);
+        setStep("childName");
       }
     }
     // setIsLoading(false)
     return () => {
       setIsLoading(false);
     };
-  }, [user, nextStep, user?.childName, navigate]);
+  }, [user, user?.childName, navigate]);
 
   const sendOtp = async () => {
     if (!email.includes("@")) {
@@ -133,8 +132,10 @@ export default function Auth() {
 
   const handleGoogleSignin = () => {
     try {
+      setIsLoading(true);
       googleLogin();
     } catch {
+      setIsLoading(false);
       setError(t("errors.auth.errorGoogleLogin"));
     }
   };
