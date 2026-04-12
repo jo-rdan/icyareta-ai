@@ -48,22 +48,28 @@ export default function Auth() {
     title: "",
     content: "",
   });
-  const { login, googleLogin, user } = useAuth();
+  const { login, googleLogin, user, hasCancelled } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && user?.childName) {
+    if (hasCancelled) {
       setIsLoading(false);
-      navigate("/app/subjects");
-    } else {
-      setIsLoading(false);
-      setStep("childName");
+      setStep("email");
+      return;
     }
-    // setIsLoading(false)
+    if (user) {
+      if (user?.childName) {
+        setIsLoading(false);
+        navigate("/app/subjects");
+      } else {
+        setIsLoading(false);
+        setStep("childName");
+      }
+    }
     return () => {
       setIsLoading(false);
     };
-  }, [user, user?.childName, navigate]);
+  }, [user, hasCancelled, user?.childName, navigate]);
 
   const sendOtp = async () => {
     if (!email.includes("@")) {

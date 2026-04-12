@@ -14,6 +14,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [hasCancelled, setHasCancelled] = useState(false);
+
   const login = async (email: string, code: string, childName?: string) => {
     // Verify OTP — send childName so backend stores it on first signup
     const { data } = await api.post("/auth/verify-otp", {
@@ -72,6 +74,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     },
     onError: () => console.error("error on Google auth"),
+    onNonOAuthError: () => {
+      setHasCancelled(true);
+    },
   });
 
   const logout = () => {
@@ -90,7 +95,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, login, googleLogin, logout, updateUser }}
+      value={{
+        user,
+        token,
+        login,
+        googleLogin,
+        logout,
+        updateUser,
+        hasCancelled,
+      }}
     >
       {children}
     </AuthContext.Provider>

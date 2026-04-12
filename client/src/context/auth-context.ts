@@ -20,6 +20,7 @@ export interface AuthContextType {
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   googleLogin: () => void;
+  hasCancelled?: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
