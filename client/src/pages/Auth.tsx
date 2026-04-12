@@ -51,8 +51,6 @@ export default function Auth() {
   const { login, googleLogin, user } = useAuth();
   const navigate = useNavigate();
 
-  console.log("load", isLoading);
-
   useEffect(() => {
     if (user) {
       if (user?.childName) {
