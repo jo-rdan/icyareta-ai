@@ -19,6 +19,11 @@ import {
 } from "../controllers/payment.controller";
 import { authenticate } from "../middleware/auth.middleware";
 import { signinWithGoogle } from "../controllers/google-auth.controller";
+import {
+  dpoReturnHandler,
+  initiateDpoPayment,
+  verifyDpoPayment,
+} from "../controllers/dpo.controller";
 
 const router = Router();
 
@@ -45,5 +50,10 @@ router.get("/quiz/session", authenticate, getSession);
 router.post("/payment/initiate", authenticate, initiatePayment);
 router.post("/payment/callback", paymentCallback);
 router.post("/payment/verify", authenticate, verifyPayment);
+
+// ── DPO payments ──────────────────────────────────────────────────────────────
+router.post("/payment/dpo/initiate", authenticate, initiateDpoPayment);
+router.get("/payment/dpo/return", dpoReturnHandler); // DPO redirects here — no auth
+router.post("/payment/dpo/verify", authenticate, verifyDpoPayment);
 
 export default router;

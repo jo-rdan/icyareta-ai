@@ -356,7 +356,7 @@ export default function Dashboard() {
               fontWeight="600"
               letterSpacing="1px"
               textTransform="uppercase"
-              color="rgba(255,255,255,0.6)"
+              color="black"
               mb="1"
             >
               {t("dashboard.primaryNationalExam")}
@@ -365,7 +365,7 @@ export default function Dashboard() {
               fontFamily="heading"
               fontWeight="800"
               fontSize="36px"
-              color="bg"
+              color="black"
               letterSpacing="-1px"
             >
               {daysUntilExam} {t("dashboard.daysLeft")}

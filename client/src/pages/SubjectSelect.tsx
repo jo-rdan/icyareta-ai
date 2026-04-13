@@ -7,7 +7,6 @@ import {
   Text,
   SimpleGrid,
   VStack,
-  Badge,
   IconButton,
   Spinner,
   HStack,
@@ -144,21 +143,6 @@ export default function SubjectSelect() {
               </Text>
             </Flex>
             <HStack columnGap={4}>
-              {!hasPaid && (
-                <Badge
-                  bg="brand.50"
-                  color="brand.600"
-                  px="3"
-                  py="1"
-                  borderRadius="full"
-                  fontSize="11px"
-                  fontWeight="600"
-                  cursor="pointer"
-                  onClick={() => navigate("/app/pricing")}
-                >
-                  {trialUsed ? t("subjects.getAccess") : t("common.freeTrial")}
-                </Badge>
-              )}
               <LanguageSelection />
               <IconButton variant={"ghost"} color={"black"} onClick={logout}>
                 <LuDoorOpen />

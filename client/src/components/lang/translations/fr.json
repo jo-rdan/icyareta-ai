@@ -157,6 +157,9 @@
         "f5": "Score instantané avec révision des mauvaises réponses",
         "f6": "Suivi de progression pour savoir quoi corriger",
         "f7": "Fonctionne hors ligne — aucune donnée requise pendant la session"
+      },
+      "dpo": {
+        "info": "Vous serez redirigé vers une page de paiement sécurisée pour payer avec Mobile Money."
       }
     },
     "legal": {

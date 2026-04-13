@@ -161,6 +161,9 @@
         "f5": "Instant score with wrong-answer review",
         "f6": "Progress tracking so you know what to fix",
         "f7": "Works offline — no data needed mid-session"
+      },
+      "dpo": {
+        "info": "You will be redirected to a secure payment page to pay with Mobile Money"
       }
     },
     "legal": {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Button,
@@ -7,23 +7,23 @@ import {
   Heading,
   Text,
   VStack,
-  HStack,
   List,
   IconButton,
   Dialog,
   Portal,
   Spinner,
   Input,
+  InputGroup,
 } from "@chakra-ui/react";
 import { LuCheck, LuStar, LuZap } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/useAuth";
 import api from "@/lib/axios";
 import { LanguageSelection } from "@/components/lang/languageSelect/LanguageSelection";
 import { useTranslation } from "react-i18next";
 import { capitalize } from "@/lib/capitalize";
 
-type PlanKey = "day_pass" | "week_pass" | "month_pass";
+type PlanKey = "day_pass" | "week_pass";
 
 interface Plan {
   key: PlanKey;
@@ -32,16 +32,20 @@ interface Plan {
   period: string;
   badge: string | null;
   badgeColor: string;
-  headline: string;
   subline: string;
   icon: React.ReactNode;
-  popular: boolean;
 }
+
+// Switch between "momo" and "dpo" by setting VITE_PAYMENT_PROVIDER in your .env
+const PAYMENT_PROVIDER = import.meta.env.VITE_PAYMENT_PROVIDER || "momo";
+const IS_TEST_MODE = import.meta.env.VITE_MOMO_TEST_MODE === "true";
 
 export default function Pricing() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, updateUser } = useAuth();
+
   const [selected, setSelected] = useState<PlanKey>("week_pass");
   const [phone, setPhone] = useState(
     user?.phoneNumber && user.phoneNumber !== user.email
@@ -52,6 +56,31 @@ export default function Pricing() {
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState("");
 
+  // Handle DPO return redirect — user comes back from DPO payment page
+  // URL will have ?payment=success&token=xxx or ?payment=failed
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    const transToken = searchParams.get("token");
+
+    if (paymentStatus === "success" && transToken) {
+      setIsLoading(true);
+      api
+        .post("/payment/dpo/verify", { transToken, accessType: selected })
+        .then(({ data }) => {
+          if (data.status === "SUCCESSFUL") {
+            updateUser({ accessStatus: "active" });
+            navigate("/app/subjects");
+          } else {
+            setError("Payment could not be confirmed. Contact support.");
+          }
+        })
+        .catch(() => setError("Payment verification failed. Contact support."))
+        .finally(() => setIsLoading(false));
+    } else if (paymentStatus === "failed") {
+      setError("Payment was cancelled or failed. Please try again.");
+    }
+  }, [navigate, searchParams, selected, updateUser]);
+
   const PLANS: Plan[] = [
     {
       key: "day_pass",
@@ -60,10 +89,8 @@ export default function Pricing() {
       period: t("pricing.plans.day.period"),
       badge: null,
       badgeColor: "",
-      headline: t("pricing.plans.day.headline"),
       subline: t("pricing.plans.day.subline"),
       icon: <LuZap size={16} />,
-      popular: false,
     },
     {
       key: "week_pass",
@@ -72,96 +99,12 @@ export default function Pricing() {
       period: t("pricing.plans.week.period"),
       badge: t("pricing.plans.week.badge"),
       badgeColor: "#f59e0b",
-      headline: t("pricing.plans.week.headline"),
       subline: t("pricing.plans.week.subline"),
       icon: <LuStar size={16} />,
-      popular: true,
     },
   ];
 
   const activePlan = PLANS.find((p) => p.key === selected)!;
-
-  const handlePay = async () => {
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-
-    const digits = phone.replace(/\D/g, "");
-    if (digits.length < 9) {
-      setError("Enter your 9-digit MTN number to receive the MoMo prompt");
-      return;
-    }
-
-    setError("");
-    setIsLoading(true);
-
-    try {
-      const fullPhone = `250${digits.slice(-9)}`;
-
-      if (!user.phoneNumber || user.phoneNumber === user.email) {
-        await api.patch("/user/phone", { phoneNumber: fullPhone });
-      }
-
-      const { data } = await api.post("/payment/initiate", {
-        accessType: selected,
-      });
-
-      setShowModal(true);
-      await pollPaymentStatus(data.referenceId);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      setError(
-        err.response?.data?.error ||
-          "Payment initiation failed. Please try again.",
-      );
-      setIsLoading(false);
-    }
-  };
-
-  const pollPaymentStatus = async (referenceId: string) => {
-    const MAX = 12;
-    let attempts = 0;
-
-    const check = async (): Promise<void> => {
-      attempts++;
-      try {
-        const { data } = await api.post("/payment/verify", {
-          referenceId,
-          accessType: selected,
-        });
-
-        if (data.status === "SUCCESSFUL") {
-          setShowModal(false);
-          setIsLoading(false);
-          updateUser({ accessStatus: "active" });
-          navigate("/app/subjects");
-          return;
-        }
-
-        if (data.status === "FAILED") {
-          setShowModal(false);
-          setIsLoading(false);
-          setError("Payment was declined. Please try again.");
-          return;
-        }
-      } catch {
-        // Network blip — keep polling
-      }
-
-      if (attempts < MAX) {
-        await new Promise((r) => setTimeout(r, 10000));
-        return check();
-      }
-
-      setShowModal(false);
-      setIsLoading(false);
-      setError("Payment timed out. If MoMo was debited, contact support.");
-    };
-
-    await new Promise((r) => setTimeout(r, 5000));
-    return check();
-  };
 
   const FEATURES = [
     t("pricing.features.f1"),
@@ -173,8 +116,115 @@ export default function Pricing() {
     t("pricing.features.f7"),
   ];
 
+  // ── MoMo payment flow ──────────────────────────────────────────────────────
+  const handleMomoPay = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    const digits = phone.replace(/\D/g, "");
+    if (!IS_TEST_MODE && digits.length < 9) {
+      setError("Enter your 9-digit MTN number to receive the MoMo prompt");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      if (!IS_TEST_MODE) {
+        const fullPhone = `+250${digits.slice(-9)}`;
+        if (!user.phoneNumber || user.phoneNumber === user.email) {
+          await api.patch("/user/phone", { phoneNumber: fullPhone });
+        }
+      }
+
+      const { data } = await api.post("/payment/initiate", {
+        accessType: selected,
+      });
+      setShowModal(true);
+      await pollMomoStatus(data.referenceId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error ||
+          "Payment initiation failed. Please try again.",
+      );
+      setIsLoading(false);
+    }
+  };
+
+  const pollMomoStatus = async (referenceId: string) => {
+    const MAX = 12;
+    let attempts = 0;
+
+    const check = async (): Promise<void> => {
+      attempts++;
+      try {
+        const { data } = await api.post("/payment/verify", {
+          referenceId,
+          accessType: selected,
+        });
+        if (data.status === "SUCCESSFUL") {
+          setShowModal(false);
+          setIsLoading(false);
+          updateUser({ accessStatus: "active" });
+          navigate("/app/subjects");
+          return;
+        }
+        if (data.status === "FAILED") {
+          setShowModal(false);
+          setIsLoading(false);
+          setError("Payment was declined. Please try again.");
+          return;
+        }
+      } catch {
+        // keep polling
+      }
+      if (attempts < MAX) {
+        await new Promise((r) => setTimeout(r, 10000));
+        return check();
+      }
+      setShowModal(false);
+      setIsLoading(false);
+      setError("Payment timed out. If MoMo was debited, contact support.");
+    };
+
+    await new Promise((r) => setTimeout(r, 5000));
+    return check();
+  };
+
+  // ── DPO payment flow ───────────────────────────────────────────────────────
+  const handleDpoPay = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const { data } = await api.post("/payment/dpo/initiate", {
+        accessType: selected,
+      });
+      // Redirect user to DPO's hosted payment page
+      window.location.href = data.paymentUrl;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      setError(
+        err.response?.data?.error ||
+          "Payment initiation failed. Please try again.",
+      );
+      setIsLoading(false);
+    }
+  };
+
+  const handlePay = PAYMENT_PROVIDER === "dpo" ? handleDpoPay : handleMomoPay;
+
   return (
-    <Box minH="100vh" bg="paper">
+    <Box minH="100vh" bg="paper" pb="20">
       {/* Header */}
       <Box
         bg="white"
@@ -185,8 +235,8 @@ export default function Pricing() {
       >
         <Flex
           maxW="container.sm"
-          justifyContent={"space-between"}
-          alignItems={"baseline"}
+          justifyContent="space-between"
+          alignItems="baseline"
         >
           <Flex align="center" gap="3">
             <IconButton
@@ -194,8 +244,8 @@ export default function Pricing() {
               variant="ghost"
               size="sm"
               borderRadius="10px"
-              onClick={() => navigate("/app/subjects")}
-              color={"bg.panel"}
+              color="bg.panel"
+              onClick={() => navigate(-1)}
             >
               <Text fontSize="18px">←</Text>
             </IconButton>
@@ -242,7 +292,6 @@ export default function Pricing() {
                   transition="all 0.15s"
                   _hover={{ borderColor: isActive ? "#1a6b3c" : "gray.300" }}
                 >
-                  {/* Popular / Save badge */}
                   {plan.badge && (
                     <Box
                       position="absolute"
@@ -266,16 +315,14 @@ export default function Pricing() {
 
                   <Flex align="center" justify="space-between">
                     <VStack align="flex-start" gap="0">
-                      <HStack gap="2">
-                        <Text
-                          fontFamily="heading"
-                          fontWeight="800"
-                          fontSize="15px"
-                          color={isActive ? "#1a6b3c" : "gray.800"}
-                        >
-                          {plan.label}
-                        </Text>
-                      </HStack>
+                      <Text
+                        fontFamily="heading"
+                        fontWeight="800"
+                        fontSize="15px"
+                        color={isActive ? "#1a6b3c" : "gray.800"}
+                      >
+                        {plan.label}
+                      </Text>
                       <Text fontSize="12px" color="gray.400" mt="1px">
                         {plan.subline}
                       </Text>
@@ -295,7 +342,6 @@ export default function Pricing() {
                     </VStack>
                   </Flex>
 
-                  {/* Per-day breakdown for multi-day plans */}
                   {plan.key === "week_pass" && (
                     <Box
                       mt="3"
@@ -309,19 +355,12 @@ export default function Pricing() {
                       </Text>
                     </Box>
                   )}
-                  {/* {plan.key === "month_pass" && (
-                    <Box mt="3" bg="#e8f5ee" borderRadius="8px" px="3" py="1.5">
-                      <Text fontSize="11px" color="#1a6b3c" fontWeight="600">
-                        🏆 Only 300 RWF/day — your best value before July exams
-                      </Text>
-                    </Box>
-                  )} */}
                 </Box>
               );
             })}
           </VStack>
 
-          {/* What's included */}
+          {/* Features */}
           <Box
             bg="white"
             borderRadius="20px"
@@ -374,87 +413,87 @@ export default function Pricing() {
             </List.Root>
           </Box>
 
-          {/* Parent trust signal */}
-          {/* <Box
-            bg="white"
-            border="1px solid"
-            borderColor="gray.100"
-            borderRadius="16px"
-            p="4"
-          >
-            <Text
-              fontSize="13px"
-              color="gray.600"
-              lineHeight="1.7"
-              fontStyle="italic"
-            >
-              {t("pricing.testimony")}
-            </Text>
-            <Text fontSize="12px" color="gray.400" fontWeight="600" mt="2">
-              — {t("pricing.witness")}
-            </Text>
-          </Box> */}
-
-          {/* MoMo number input */}
-          <Box
-            bg="white"
-            borderRadius="20px"
-            p="5"
-            border="1px solid"
-            borderColor="gray.100"
-          >
-            <Text
-              fontFamily="heading"
-              fontWeight="700"
-              fontSize="12px"
-              letterSpacing="1px"
-              textTransform="uppercase"
-              color="gray.400"
-              mb="3"
-            >
-              {t("pricing.yourMomoNumber")}
-            </Text>
-            <Flex gap="3" align="center">
+          {/* Payment input — MoMo only, hidden for DPO and test mode */}
+          {PAYMENT_PROVIDER === "momo" &&
+            (IS_TEST_MODE ? (
               <Box
-                bg="gray.50"
-                border="1.5px solid"
-                borderColor="gray.200"
-                borderRadius="12px"
-                px="3"
-                h="48px"
-                display="flex"
-                alignItems="center"
-                fontSize="14px"
-                fontWeight="600"
-                color="gray.600"
-                flexShrink={0}
+                bg="orange.50"
+                border="1px solid"
+                borderColor="orange.100"
+                borderRadius="16px"
+                px="4"
+                py="3"
               >
-                🇷🇼 +250
+                <Text fontSize="13px" color="orange.700" fontWeight="500">
+                  🧪 Sandbox mode — payment will auto-approve in ~30 seconds. No
+                  real money moved.
+                </Text>
               </Box>
-              <Input
-                placeholder="7XX XXX XXX"
-                value={phone}
-                onChange={(e) =>
-                  setPhone(e.target.value.replace(/\D/g, "").slice(0, 9))
-                }
-                type="tel"
-                h="48px"
-                border="1.5px solid"
-                borderColor="gray.200"
-                borderRadius="12px"
+            ) : (
+              <Box
                 bg="white"
-                fontSize="15px"
-                _focus={{
-                  borderColor: "#1a6b3c",
-                  boxShadow: "none",
-                  bg: "white",
-                }}
-              />
-            </Flex>
-            <Text fontSize="12px" color="gray.400" mt="2">
-              {t("pricing.momoPrompt")}
-            </Text>
-          </Box>
+                borderRadius="20px"
+                p="5"
+                border="1px solid"
+                borderColor="gray.100"
+              >
+                <Text
+                  fontFamily="heading"
+                  fontWeight="700"
+                  fontSize="12px"
+                  letterSpacing="1px"
+                  textTransform="uppercase"
+                  color="gray.400"
+                  mb="3"
+                >
+                  {t("pricing.yourMomoNumber")}
+                </Text>
+                <InputGroup
+                  startAddon="🇷🇼 +250"
+                  color={"gray.600"}
+                  startAddonProps={{
+                    bg: "gray.50",
+                    px: 2,
+                    borderColor: "gray.200",
+                  }}
+                >
+                  <Input
+                    px={2}
+                    placeholder="7XX XXX XXX"
+                    onChange={(e) =>
+                      setPhone(e.target.value.replace(/\D/g, "").slice(0, 9))
+                    }
+                    type="tel"
+                    border="1.5px solid"
+                    borderColor="gray.200"
+                    bg="white"
+                    _focus={{
+                      borderColor: "#1a6b3c",
+                      boxShadow: "none",
+                      bg: "white",
+                    }}
+                  />
+                </InputGroup>
+                <Text fontSize="12px" color="gray.400" mt="2">
+                  {t("pricing.momoPrompt")}
+                </Text>
+              </Box>
+            ))}
+
+          {PAYMENT_PROVIDER === "dpo" && (
+            <Box
+              bg="blue.50"
+              border="1px solid"
+              borderColor="blue.100"
+              borderRadius="16px"
+              px="4"
+              py="3"
+            >
+              <Text fontSize="13px" color="blue.700" fontWeight="500">
+                💳 {t("pricing.dpo.info")}.
+              </Text>
+            </Box>
+          )}
 
           {error && (
             <Box
@@ -471,7 +510,6 @@ export default function Pricing() {
             </Box>
           )}
 
-          {/* CTA */}
           <Button
             size="lg"
             w="full"
@@ -494,50 +532,58 @@ export default function Pricing() {
       </Container>
 
       {/* MoMo waiting modal */}
-      <Dialog.Root
-        open={showModal}
-        onOpenChange={() => {}}
-        placement="center"
-        closeOnInteractOutside={false}
-      >
-        <Portal>
-          <Dialog.Backdrop backdropFilter="blur(4px)" />
-          <Dialog.Positioner>
-            <Dialog.Content borderRadius="24px" mx="6" p="2" bg={"white"}>
-              <Dialog.Body py="8" px="6" textAlign="center">
-                <VStack gap="4">
-                  <Spinner
-                    borderWidth="3px"
-                    animationDuration="0.8s"
-                    color="brand.600"
-                    width="48px"
-                    height="48px"
-                  />
-                  <Heading
-                    fontFamily="heading"
-                    fontSize="20px"
-                    fontWeight="800"
-                    letterSpacing="-0.5px"
-                  >
-                    {t("pricing.approvePrompt")}
-                  </Heading>
-                  <Text fontSize="14px" color="gray.500" lineHeight="1.6">
-                    {t("pricing.momoPaymentOf")}{" "}
-                    <strong>{activePlan.price.toLocaleString()} RWF</strong>{" "}
-                    {t("pricing.hasBeenSent")} {activePlan.label}{" "}
-                    {t("common.instantly")}.
-                  </Text>
-                  <Box bg="#e8f5ee" borderRadius="12px" px="4" py="3" w="full">
-                    <Text fontSize="12px" color="#1a6b3c" fontWeight="600">
-                      📱 {t("pricing.waitingConfirmation")}...
+      {PAYMENT_PROVIDER === "momo" && (
+        <Dialog.Root
+          open={showModal}
+          onOpenChange={() => {}}
+          placement="center"
+          closeOnInteractOutside={false}
+        >
+          <Portal>
+            <Dialog.Backdrop backdropFilter="blur(4px)" />
+            <Dialog.Positioner>
+              <Dialog.Content borderRadius="24px" mx="6" p="2" bg={"white"}>
+                <Dialog.Body py="8" px="6" textAlign="center">
+                  <VStack gap="4">
+                    <Spinner
+                      borderWidth="3px"
+                      animationDuration="0.8s"
+                      color="brand.600"
+                      width="48px"
+                      height="48px"
+                    />
+                    <Heading
+                      fontFamily="heading"
+                      fontSize="20px"
+                      fontWeight="800"
+                      letterSpacing="-0.5px"
+                    >
+                      {t("pricing.approvePrompt")}
+                    </Heading>
+                    <Text fontSize="14px" color="gray.500" lineHeight="1.6">
+                      {t("pricing.momoPaymentOf")}{" "}
+                      <strong>{activePlan.price.toLocaleString()} RWF</strong>{" "}
+                      {t("pricing.hasBeenSent")} {activePlan.label}{" "}
+                      {t("common.instantly")}.
                     </Text>
-                  </Box>
-                </VStack>
-              </Dialog.Body>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+                    <Box
+                      bg="#e8f5ee"
+                      borderRadius="12px"
+                      px="4"
+                      py="3"
+                      w="full"
+                    >
+                      <Text fontSize="12px" color="#1a6b3c" fontWeight="600">
+                        📱 {t("pricing.waitingConfirmation")}...
+                      </Text>
+                    </Box>
+                  </VStack>
+                </Dialog.Body>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
+      )}
     </Box>
   );
 }

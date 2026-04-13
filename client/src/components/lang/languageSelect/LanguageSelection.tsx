@@ -17,6 +17,7 @@ export const LanguageSelection = () => {
       size="sm"
       defaultValue={[localStorage.getItem("lang") ?? "en"]}
       maxW={"100px"}
+      colorPalette={"white"}
     >
       <Select.HiddenSelect />
       <Select.Control>
@@ -24,7 +25,7 @@ export const LanguageSelection = () => {
       </Select.Control>
       <Portal>
         <Select.Positioner>
-          <Select.Content minW="32">
+          <Select.Content minW="32" bg={"black"}>
             {languages.items.map((language) => (
               <Select.Item item={language} key={language.value}>
                 <HStack gap={10}>

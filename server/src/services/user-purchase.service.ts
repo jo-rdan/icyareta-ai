@@ -8,7 +8,7 @@ export type AccessType = "free_trial" | "day_pass" | "week_pass";
 export const ACCESS_PRICES: Record<AccessType, number> = {
   free_trial: 0,
   day_pass: 800,
-  week_pass: 3999, // updated from 5000
+  week_pass: 3999,
 };
 
 const ACCESS_DURATIONS_MS: Record<AccessType, number> = {
@@ -64,6 +64,22 @@ export class UserPurchaseService {
         ),
       )
       .orderBy(userPurchases.expiresAt)
+      .limit(1);
+    return result[0] ?? null;
+  }
+
+  /**
+   * Looks up a purchase by its DPO/MoMo transaction reference.
+   * Used by the DPO return handler to check if the purchase
+   * was already activated (e.g. webhook fired before redirect).
+   */
+  async getPurchaseByTransactionRef(
+    transactionReference: string,
+  ): Promise<UserPurchase | null> {
+    const result = await db
+      .select()
+      .from(userPurchases)
+      .where(eq(userPurchases.transactionReference, transactionReference))
       .limit(1);
     return result[0] ?? null;
   }
